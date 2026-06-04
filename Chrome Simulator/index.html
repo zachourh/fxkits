@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chrome 3.0</title>
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; font-family: system-ui, sans-serif; }
+  #app { width: 100vw; height: 100vh; }
+  canvas { display: block; }
+
+  /* ── Bottom bar ─────────────────────────────── */
+  #ui {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.05); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.09); border-radius: 16px;
+    padding: 13px 22px; z-index: 10;
+  }
+  #textInput {
+    background: transparent; border: none; outline: none;
+    color: #fff; font-size: 17px; font-weight: 600;
+    letter-spacing: 0.08em; width: 200px; caret-color: rgba(255,255,255,0.5);
+  }
+  #textInput::placeholder { color: rgba(255,255,255,0.18); }
+  .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.1); flex-shrink: 0; }
+
+  /* ── Custom font dropdown ───────────────────── */
+  .font-selector { position: relative; cursor: pointer; user-select: none; }
+  .font-current {
+    color: rgba(255,255,255,0.45); font-size: 12px;
+    letter-spacing: 0.04em; padding: 4px 2px; white-space: nowrap;
+  }
+  .font-current:hover { color: rgba(255,255,255,0.7); }
+  .font-menu {
+    position: absolute; bottom: calc(100% + 10px); left: 50%;
+    transform: translateX(-50%);
+    background: #18181c; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 13px; padding: 6px; min-width: 170px;
+    display: none; flex-direction: column; gap: 2px; z-index: 30;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .font-menu.open { display: flex; }
+  .font-opt {
+    padding: 9px 13px; border-radius: 8px;
+    font-size: 13px; color: rgba(255,255,255,0.5);
+    cursor: pointer; transition: all 0.1s; white-space: nowrap;
+  }
+  .font-opt:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
+  .font-opt.active { background: rgba(255,255,255,0.1); color: #fff; }
+
+  /* ── Upload button ──────────────────────────── */
+  #uploadBtn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; color: rgba(255,255,255,0.4); font-size: 11px;
+    letter-spacing: 0.04em; padding: 6px 13px; cursor: pointer; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  #uploadBtn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  #fontFile { display: none; }
+  #exportBtn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; color: rgba(255,255,255,0.55); font-size: 11px;
+    letter-spacing: 0.05em; padding: 6px 13px; cursor: pointer; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  #exportBtn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+  /* ── Export dropdown ────────────────────────────── */
+  .export-wrap { position: relative; display: inline-block; }
+  .export-menu {
+    position: absolute; bottom: calc(100% + 10px); right: 0;
+    background: #18181c; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 5px; min-width: 178px;
+    display: none; flex-direction: column; gap: 2px; z-index: 40;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.65);
+  }
+  .export-menu.open { display: flex; }
+  .export-opt {
+    padding: 9px 13px; border-radius: 8px; font-size: 12px;
+    color: rgba(255,255,255,0.5); cursor: pointer;
+    background: none; border: none; text-align: left;
+    transition: all 0.1s; white-space: nowrap;
+    letter-spacing: 0.03em; width: 100%;
+  }
+  .export-opt:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
+  .export-sep { height: 1px; background: rgba(255,255,255,0.07); margin: 3px 0; }
+
+  /* ── Controls panel ─────────────────────────── */
+  #panel {
+    position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    background: rgba(10,10,14,0.78); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+    padding: 20px 18px; width: 172px; z-index: 10;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .ctrl-row { display: flex; flex-direction: column; gap: 7px; }
+  .ctrl-label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+  }
+  .ctrl-label span { color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 2px;
+    background: rgba(255,255,255,0.12); border-radius: 2px;
+    outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    border-radius: 50%; background: #fff; cursor: pointer;
+    box-shadow: 0 0 5px rgba(255,255,255,0.35);
+  }
+  .panel-divider { height: 1px; background: rgba(255,255,255,0.07); }
+  .presets { display: flex; flex-direction: column; gap: 5px; }
+  .preset-btn {
+    width: 100%; padding: 9px 13px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.45); font-size: 13px; letter-spacing: 0.03em;
+    cursor: pointer; text-align: left; transition: all 0.15s;
+  }
+  .preset-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+  .preset-btn.active { border-color: rgba(255,255,255,0.25); color: #fff; background: rgba(255,255,255,0.09); }
+
+  /* ── Misc ───────────────────────────────────── */
+  #hint {
+    position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.13); font-size: 10px; letter-spacing: 0.13em;
+    text-transform: uppercase; pointer-events: none; user-select: none;
+  }
+  #loading {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #000; color: rgba(255,255,255,0.22); font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase; z-index: 100; transition: opacity 0.4s;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+  #exportModal {
+    position: fixed; inset: 0; z-index: 60; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(14px);
+    padding: 24px;
+  }
+  #exportModal.open { display: flex; }
+  .modal-card {
+    width: min(1040px, 100%); height: min(78vh, 820px);
+    background: rgba(13,13,18,0.96); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px; box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px; padding: 18px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .modal-title {
+    color: #fff; font-size: 15px; font-weight: 600; letter-spacing: 0.04em;
+  }
+  .modal-sub {
+    color: rgba(255,255,255,0.42); font-size: 11px; letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+  .modal-actions { display: flex; align-items: center; gap: 10px; }
+  .modal-btn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; color: rgba(255,255,255,0.7); font-size: 11px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 10px 14px; cursor: pointer; transition: all 0.15s;
+  }
+  .modal-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .modal-btn.primary {
+    background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.18);
+  }
+  #exportStatus {
+    margin-left: 4px; min-width: 82px; color: rgba(255,255,255,0.4);
+    font-size: 11px; letter-spacing: 0.04em;
+  }
+  #exportCode {
+    flex: 1; width: 100%; border: 0; resize: none; outline: none;
+    background: transparent; color: rgba(255,255,255,0.88);
+    padding: 18px 20px 22px; font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+    white-space: pre; overflow: auto;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="loading">Loading</div>
+  <div id="hint">Drag · Right-drag to pan · Scroll to zoom</div>
+
+  <div id="ui">
+    <input type="text" id="textInput" value="Chrome" maxlength="14" autocomplete="off" spellcheck="false">
+    <div class="sep"></div>
+
+    <div class="font-selector" id="fontSelector">
+      <div class="font-current" id="fontCurrent">Helvetica</div>
+      <div class="font-menu" id="fontMenu">
+        <div class="font-opt active" data-key="helvetica">Helvetica</div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+    <button id="uploadBtn" onclick="document.getElementById('fontFile').click()">Upload Font</button>
+    <input type="file" id="fontFile" accept=".ttf,.otf">
+    <div class="sep"></div>
+    <div class="export-wrap" id="exportWrap">
+      <button id="exportBtn">Export ▾</button>
+      <div class="export-menu" id="exportMenu">
+        <button class="export-opt" data-action="framer">Framer Code</button>
+        <div class="export-sep"></div>
+        <button class="export-opt" data-action="gltf">Export GLTF (.glb)</button>
+        <button class="export-opt" data-action="obj">Export OBJ + MTL</button>
+        <button class="export-opt" data-action="png">Export PNG (transparent)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div class="ctrl-row">
+      <div class="ctrl-label">Roughness <span id="roughnessVal">0.08</span></div>
+      <input type="range" id="roughness" min="0" max="0.5" step="0.01" value="0.08">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Reflection <span id="reflectionVal">1.0</span></div>
+      <input type="range" id="reflection" min="0" max="2.5" step="0.05" value="1.0">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Waviness <span id="wavinessVal">0.18</span></div>
+      <input type="range" id="waviness" min="0" max="0.7" step="0.01" value="0.18">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Bloom <span id="bloomVal">0.25</span></div>
+      <input type="range" id="bloomCtrl" min="0" max="0.8" step="0.01" value="0.25">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Stars <span id="starsVal">0.6</span></div>
+      <input type="range" id="starsCtrl" min="0" max="2" step="0.05" value="0.6">
+    </div>
+    <div class="panel-divider"></div>
+    <div class="presets">
+      <button class="preset-btn active" data-preset="silver">Silver</button>
+      <button class="preset-btn"        data-preset="gold">Gold</button>
+      <button class="preset-btn"        data-preset="ice">Ice</button>
+      <button class="preset-btn"        data-preset="copper">Copper</button>
+    </div>
+
+  </div>
+</div>
+<div id="exportModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Framer Code Component</div>
+        <div class="modal-sub">Current text, font, chrome settings, camera, lighting, and transparent output are serialized here.</div>
+      </div>
+      <div class="modal-actions">
+        <span id="exportStatus"></span>
+        <button class="modal-btn primary" id="copyCodeBtn">Copy Code</button>
+        <button class="modal-btn" id="closeModalBtn">Close</button>
+      </div>
+    </div>
+    <textarea id="exportCode" spellcheck="false"></textarea>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three'
+import { OrbitControls }   from 'three/addons/controls/OrbitControls.js'
+import { FontLoader }      from 'three/addons/loaders/FontLoader.js'
+import { TextGeometry }    from 'three/addons/geometries/TextGeometry.js'
+import { EffectComposer }  from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import { ShaderPass }      from 'three/addons/postprocessing/ShaderPass.js'
+import { OutputPass }      from 'three/addons/postprocessing/OutputPass.js'
+import { GLTFExporter }   from 'three/addons/exporters/GLTFExporter.js'
+import { OBJExporter }    from 'three/addons/exporters/OBJExporter.js'
+
+// ─── Renderer ─────────────────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ antialias: true })
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setSize(innerWidth, innerHeight)
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.toneMappingExposure = 1.1
+renderer.outputColorSpace = THREE.SRGBColorSpace
+document.getElementById('app').prepend(renderer.domElement)
+
+const scene  = new THREE.Scene()
+scene.background = new THREE.Color(0x000000)
+const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 500)
+camera.position.set(0, 0, 9)
+
+const controls = new OrbitControls(camera, renderer.domElement)
+controls.enableDamping = true
+controls.dampingFactor = 0.055
+controls.minDistance   = 1.5
+controls.maxDistance   = 40
+controls.target.set(0, 0, 0)
+
+// ─── Studio environment ───────────────────────────────────────────────────────
+function buildStudioEnv() {
+  const W = 2048, H = 1024
+  const cv = document.createElement('canvas')
+  cv.width = W; cv.height = H
+  const cx = cv.getContext('2d')
+
+  cx.fillStyle = '#03030a'
+  cx.fillRect(0, 0, W, H)
+
+  // Left softbox
+  cx.save()
+  cx.shadowBlur = 220; cx.shadowColor = 'rgba(215, 228, 255, 1)'
+  cx.fillStyle = 'rgba(245, 252, 255, 1)'
+  cx.fillRect(W * 0.04, H * 0.08, W * 0.20, H * 0.28)
+  cx.restore()
+
+  // Right softbox
+  cx.save()
+  cx.shadowBlur = 200; cx.shadowColor = 'rgba(195, 215, 255, 0.95)'
+  cx.fillStyle = 'rgba(225, 240, 255, 0.95)'
+  cx.fillRect(W * 0.76, H * 0.08, W * 0.20, H * 0.25)
+  cx.restore()
+
+  // Top strip
+  cx.save()
+  cx.shadowBlur = 100; cx.shadowColor = 'rgba(180, 200, 255, 0.6)'
+  cx.fillStyle = 'rgba(200, 220, 255, 0.5)'
+  cx.fillRect(W * 0.36, H * 0.02, W * 0.28, H * 0.04)
+  cx.restore()
+
+  // Invisible HDRI-like window banks.
+  // These are not shown directly in the scene; they only give the chrome
+  // something more graphic and mirror-like to reflect when roughness drops.
+  const addWindowBank = (x, y, w, h, alpha = 1) => {
+    cx.save()
+    cx.shadowBlur = 130
+    cx.shadowColor = `rgba(215, 232, 255, ${0.7 * alpha})`
+    cx.fillStyle = `rgba(236, 245, 255, ${0.55 * alpha})`
+    cx.fillRect(x, y, w, h)
+
+    cx.globalCompositeOperation = 'destination-out'
+    cx.fillStyle = 'rgba(0,0,0,0.95)'
+    cx.fillRect(x + w * 0.18, y, w * 0.035, h)
+    cx.fillRect(x + w * 0.48, y, w * 0.035, h)
+    cx.fillRect(x + w * 0.78, y, w * 0.035, h)
+    cx.fillRect(x, y + h * 0.46, w, h * 0.05)
+    cx.restore()
+  }
+
+  addWindowBank(W * 0.16, H * 0.19, W * 0.18, H * 0.30, 0.95)
+  addWindowBank(W * 0.67, H * 0.16, W * 0.16, H * 0.27, 0.82)
+
+  // Long side streaks so bevels catch elegant mirror lines.
+  const leftStreak = cx.createLinearGradient(W * 0.08, 0, W * 0.23, 0)
+  leftStreak.addColorStop(0, 'rgba(255,255,255,0)')
+  leftStreak.addColorStop(0.45, 'rgba(220,235,255,0.34)')
+  leftStreak.addColorStop(1, 'rgba(255,255,255,0)')
+  cx.fillStyle = leftStreak
+  cx.fillRect(W * 0.07, H * 0.10, W * 0.18, H * 0.78)
+
+  const rightStreak = cx.createLinearGradient(W * 0.9, 0, W * 0.75, 0)
+  rightStreak.addColorStop(0, 'rgba(255,255,255,0)')
+  rightStreak.addColorStop(0.5, 'rgba(205,225,255,0.24)')
+  rightStreak.addColorStop(1, 'rgba(255,255,255,0)')
+  cx.fillStyle = rightStreak
+  cx.fillRect(W * 0.74, H * 0.14, W * 0.18, H * 0.74)
+
+  // Horizon band
+  const hz = cx.createLinearGradient(0, H * 0.46, 0, H * 0.54)
+  hz.addColorStop(0, 'rgba(0,0,0,0)')
+  hz.addColorStop(0.5, 'rgba(190, 210, 240, 0.75)')
+  hz.addColorStop(1, 'rgba(0,0,0,0)')
+  cx.fillStyle = hz; cx.fillRect(0, H * 0.43, W, H * 0.14)
+
+  // Dark floor
+  const floor = cx.createLinearGradient(0, H * 0.55, 0, H)
+  floor.addColorStop(0, 'rgba(0,0,0,0)')
+  floor.addColorStop(1, 'rgba(1,1,6,0.97)')
+  cx.fillStyle = floor; cx.fillRect(0, 0, W, H)
+
+  // Side vignette
+  const sl = cx.createLinearGradient(0, 0, W * 0.25, 0)
+  sl.addColorStop(0, 'rgba(0,0,0,0.5)'); sl.addColorStop(1, 'rgba(0,0,0,0)')
+  cx.fillStyle = sl; cx.fillRect(0, 0, W * 0.25, H)
+  const sr = cx.createLinearGradient(W, 0, W * 0.75, 0)
+  sr.addColorStop(0, 'rgba(0,0,0,0.4)'); sr.addColorStop(1, 'rgba(0,0,0,0)')
+  cx.fillStyle = sr; cx.fillRect(W * 0.75, 0, W * 0.25, H)
+
+  // Soft bottom glow to give inside bevels more polished contrast.
+  const underGlow = cx.createRadialGradient(W * 0.5, H * 0.78, 0, W * 0.5, H * 0.78, W * 0.28)
+  underGlow.addColorStop(0, 'rgba(175, 200, 255, 0.22)')
+  underGlow.addColorStop(1, 'rgba(0,0,0,0)')
+  cx.fillStyle = underGlow
+  cx.fillRect(W * 0.18, H * 0.56, W * 0.64, H * 0.35)
+
+  return cv
+}
+
+const pmrem  = new THREE.PMREMGenerator(renderer)
+const envTex = new THREE.CanvasTexture(buildStudioEnv())
+envTex.mapping = THREE.EquirectangularReflectionMapping
+scene.environment = pmrem.fromEquirectangular(envTex).texture
+envTex.dispose(); pmrem.dispose()
+
+// ─── Material ─────────────────────────────────────────────────────────────────
+const PRESETS = {
+  silver: new THREE.Color(0xdde8f5),
+  gold:   new THREE.Color(0xffd888),
+  ice:    new THREE.Color(0x99bbff),
+  copper: new THREE.Color(0xffb070),
+}
+
+const mat = new THREE.MeshPhysicalMaterial({
+  color:              PRESETS.silver.clone(),
+  metalness:          1.0,
+  roughness:          0.08,
+  envMapIntensity:    1.35,
+  clearcoat:          0.95,
+  clearcoatRoughness: 0.03,
+  reflectivity:       1.0,
+})
+
+let reflectionBoost = 1.0
+let wavinessStrength = 0.18
+let currentPreset = 'silver'
+let customFontData = null
+let currentExportCode = ''
+
+mat.onBeforeCompile = shader => {
+  shader.uniforms.uWaviness = { value: wavinessStrength }
+
+  shader.vertexShader = shader.vertexShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+      varying vec3 vWorldPos;
+      varying vec3 vObjPos;`
+    )
+    .replace(
+      '#include <worldpos_vertex>',
+      `#include <worldpos_vertex>
+      vWorldPos = worldPosition.xyz;
+      vObjPos = position;`
+    )
+
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+      uniform float uWaviness;
+      varying vec3 vWorldPos;
+      varying vec3 vObjPos;
+
+      float flowField(vec3 p) {
+        float a = sin(p.x * 2.2 + sin(p.y * 1.8) * 1.4);
+        float b = sin(p.y * 2.7 + cos(p.z * 2.1) * 1.2);
+        float c = sin((p.x + p.y + p.z) * 1.8 + sin((p.x - p.z) * 1.9) * 0.9);
+        float d = cos((p.x * 2.9 - p.y * 1.7 + p.z * 1.3));
+        return a * 0.34 + b * 0.28 + c * 0.24 + d * 0.14;
+      }
+
+      vec3 flowNormal(vec3 p, vec3 baseNormal) {
+        float e = 0.03;
+        float center = flowField(p);
+        float dx = flowField(p + vec3(e, 0.0, 0.0)) - center;
+        float dy = flowField(p + vec3(0.0, e, 0.0)) - center;
+        float dz = flowField(p + vec3(0.0, 0.0, e)) - center;
+        vec3 grad = vec3(dx, dy, dz) / e;
+        vec3 warped = normalize(baseNormal + grad * uWaviness * 1.35);
+        return faceforward(warped, -vViewPosition, baseNormal);
+      }`
+    )
+    .replace(
+      '#include <normal_fragment_begin>',
+      `#include <normal_fragment_begin>
+      vec3 flowPos = vObjPos * 1.15 + vWorldPos * 0.08;
+      normal = flowNormal(flowPos, normal);`
+    )
+
+  mat.userData.shader = shader
+}
+
+mat.customProgramCacheKey = () => 'chrome-flow-v1'
+
+function syncMaterialResponse() {
+  const roughness = mat.roughness
+  const smoothness = 1 - roughness
+  mat.envMapIntensity = (0.95 + smoothness * 1.25) * reflectionBoost
+  mat.clearcoat = 0.55 + smoothness * 0.45
+  mat.clearcoatRoughness = 0.015 + roughness * 0.45
+  mat.needsUpdate = true
+}
+
+syncMaterialResponse()
+
+// ─── Lights (dialed down to complement env, not overwhelm) ────────────────────
+const kl = new THREE.PointLight(0xeef5ff, 40, 0, 2.5)
+kl.position.set(-5, 7, 6); scene.add(kl)
+
+const kr = new THREE.PointLight(0xe0eeff, 28, 0, 2.5)
+kr.position.set(6, 6, 5); scene.add(kr)
+
+const g1 = new THREE.PointLight(0xffffff, 80, 0, 3.5)
+g1.position.set(4, 9, 6); scene.add(g1)
+
+const g2 = new THREE.PointLight(0xddeeff, 55, 0, 3.5)
+g2.position.set(-5, 7, 5); scene.add(g2)
+
+scene.add(new THREE.AmbientLight(0x05050f, 2))
+
+// ─── Post-processing ──────────────────────────────────────────────────────────
+const composer = new EffectComposer(renderer)
+composer.addPass(new RenderPass(scene, camera))
+
+const bloom = new UnrealBloomPass(
+  new THREE.Vector2(innerWidth, innerHeight),
+  0.25,   // strength — kept low, max on slider is 0.8
+  0.4,    // radius
+  0.92    // high threshold = only absolute brightest pixels bloom
+)
+composer.addPass(bloom)
+
+const StarShader = {
+  uniforms: {
+    tDiffuse:  { value: null },
+    strength:  { value: 0.6 },
+    threshold: { value: 0.90 },
+    aspect:    { value: innerWidth / innerHeight },
+  },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float strength, threshold, aspect;
+    varying vec2 vUv;
+    vec3 streak(vec2 dir, float len){
+      vec3 a=vec3(0.); float t=0.;
+      for(int i=-14;i<=14;i++){
+        float s=float(i)/14.; float w=exp(-s*s*5.5);
+        vec3 c=texture2D(tDiffuse,vUv+dir*s*len).rgb;
+        float m=smoothstep(threshold-.12,threshold+.04,dot(c,vec3(.299,.587,.114)));
+        a+=c*w*m; t+=w;
+      }
+      return a/max(t,.001);
+    }
+    void main(){
+      vec4 o=texture2D(tDiffuse,vUv);
+      float lum=dot(o.rgb,vec3(.299,.587,.114));
+      float mask=smoothstep(threshold-.15,threshold+.05,lum);
+      vec3 h =streak(vec2(1./(1024.*aspect),0.),.07);
+      vec3 v =streak(vec2(0.,1./1024.),.07);
+      vec3 d1=streak(vec2(.7/(1024.*aspect),.7/1024.),.05);
+      vec3 d2=streak(vec2(-.7/(1024.*aspect),.7/1024.),.05);
+      gl_FragColor=vec4(o.rgb+(h+v)*.55+(d1+d2)*.25)*strength*mask+o.rgb,o.a);
+    }
+  `
+}
+
+// fix the fragshader (concatenation issue above — rewrite cleanly)
+StarShader.fragmentShader = `
+  uniform sampler2D tDiffuse;
+  uniform float strength, threshold, aspect;
+  varying vec2 vUv;
+  vec3 streak(vec2 dir, float len){
+    vec3 a=vec3(0.0); float t=0.0;
+    for(int i=-14;i<=14;i++){
+      float s=float(i)/14.0; float w=exp(-s*s*5.5);
+      vec3 c=texture2D(tDiffuse,vUv+dir*s*len).rgb;
+      float m=smoothstep(threshold-0.12,threshold+0.04,dot(c,vec3(0.299,0.587,0.114)));
+      a+=c*w*m; t+=w;
+    }
+    return a/max(t,0.001);
+  }
+  void main(){
+    vec4 o=texture2D(tDiffuse,vUv);
+    float lum=dot(o.rgb,vec3(0.299,0.587,0.114));
+    float mask=smoothstep(threshold-0.15,threshold+0.05,lum);
+    vec3 h =streak(vec2(1.0/(1024.0*aspect),0.0),0.07);
+    vec3 v =streak(vec2(0.0,1.0/1024.0),0.07);
+    vec3 d1=streak(vec2(0.7/(1024.0*aspect),0.7/1024.0),0.05);
+    vec3 d2=streak(vec2(-0.7/(1024.0*aspect),0.7/1024.0),0.05);
+    vec3 star=(h+v)*0.55+(d1+d2)*0.25;
+    gl_FragColor=vec4(o.rgb+star*strength*mask,o.a);
+  }
+`
+const starPass = new ShaderPass(StarShader)
+composer.addPass(starPass)
+composer.addPass(new OutputPass())
+
+// ─── Font system ──────────────────────────────────────────────────────────────
+const fontLoader = new FontLoader()
+const fontCache  = {}
+const FONT_CDN   = 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/'
+
+const FONT_DEFS = {
+  helvetica: { label: 'Helvetica',        type: 'three',    url: `${FONT_CDN}helvetiker_bold.typeface.json` },
+}
+
+function openTypePathToShapes(otPath) {
+  const shapePath = new THREE.ShapePath()
+
+  for (const cmd of otPath.commands) {
+    switch (cmd.type) {
+      case 'M':
+        shapePath.moveTo(cmd.x, -cmd.y)
+        break
+      case 'L':
+        shapePath.lineTo(cmd.x, -cmd.y)
+        break
+      case 'C':
+        shapePath.bezierCurveTo(cmd.x1, -cmd.y1, cmd.x2, -cmd.y2, cmd.x, -cmd.y)
+        break
+      case 'Q':
+        shapePath.quadraticCurveTo(cmd.x1, -cmd.y1, cmd.x, -cmd.y)
+        break
+      case 'Z':
+        if (shapePath.currentPath) shapePath.currentPath.autoClose = true
+        break
+    }
+  }
+
+  return shapePath.toShapes(true)
+}
+
+function arrayBufferToBase64(buffer) {
+  let binary = ''
+  const bytes = new Uint8Array(buffer)
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return btoa(binary)
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\$\{/g, '\\${')
+}
+
+function nextFrame() {
+  return new Promise(resolve => requestAnimationFrame(() => resolve()))
+}
+
+function bufferToBase64Async(buffer) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '')
+      resolve(dataUrl.split(',')[1] || '')
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(new Blob([buffer]))
+  })
+}
+
+async function serializeCurrentGeometryPacked() {
+  const geo = buildExportGeometry()
+  if (!geo) return null
+  geo.computeBoundingBox()
+  const bounds = geo.boundingBox
+  const position = geo.getAttribute('position')
+  const index = geo.index
+  const src = position.array
+  const quantized = new Uint16Array(src.length)
+  const min = [bounds.min.x, bounds.min.y, bounds.min.z]
+  const max = [bounds.max.x, bounds.max.y, bounds.max.z]
+  const range = max.map((value, i) => Math.max(value - min[i], 1e-6))
+
+  for (let i = 0; i < src.length; i += 3) {
+    quantized[i] = Math.round(((src[i] - min[0]) / range[0]) * 65535)
+    quantized[i + 1] = Math.round(((src[i + 1] - min[1]) / range[1]) * 65535)
+    quantized[i + 2] = Math.round(((src[i + 2] - min[2]) / range[2]) * 65535)
+  }
+
+  const indexArray = index
+    ? index.array
+    : (position.count > 65535
+        ? Uint32Array.from({ length: position.count }, (_, i) => i)
+        : Uint16Array.from({ length: position.count }, (_, i) => i))
+
+  await nextFrame()
+
+  return {
+    position: {
+      type: 'Uint16Array',
+      itemSize: position.itemSize,
+      min,
+      max,
+      base64: await bufferToBase64Async(quantized.buffer),
+    },
+    normal: null,
+    uv: null,
+    index: {
+      type: indexArray.constructor.name,
+      base64: await bufferToBase64Async(indexArray.buffer),
+    },
+  }
+}
+
+function buildOpenTypeGeometry(otFont, text, opts = {}) {
+  const fontSize = opts.fontSize ?? 160
+  const otPath = otFont.getPath(text, 0, 0, fontSize)
+  const shapes = openTypePathToShapes(otPath)
+
+  const geo = new THREE.ExtrudeGeometry(shapes, {
+    depth: opts.depth ?? 50,
+    curveSegments: opts.curveSegments ?? 22,
+    bevelEnabled: opts.bevelEnabled ?? true,
+    bevelThickness: opts.bevelThickness ?? 9,
+    bevelSize: opts.bevelSize ?? 5.5,
+    bevelOffset: opts.bevelOffset ?? 0,
+    bevelSegments: opts.bevelSegments ?? 16,
+  })
+
+  const scale = (opts.size ?? 1.5) / fontSize
+  geo.scale(scale, scale, scale)
+  geo.computeVertexNormals()
+  return geo
+}
+
+function buildExportGeometry() {
+  const fontEntry = fontCache[activeKey]
+  if (!fontEntry) return textMesh?.geometry?.clone() || null
+  const text = (document.getElementById('textInput').value || 'Chrome').trim() || 'Chrome'
+  const exportOpts = fontEntry.type === 'three'
+    ? {
+        size: 1.5,
+        height: 0.5,
+        curveSegments: 8,
+        bevelEnabled: true,
+        bevelThickness: 0.09,
+        bevelSize: 0.055,
+        bevelOffset: 0,
+        bevelSegments: 4,
+      }
+    : {
+        size: 1.5,
+        depth: 50,
+        curveSegments: 8,
+        bevelEnabled: true,
+        bevelThickness: 9,
+        bevelSize: 5.5,
+        bevelOffset: 0,
+        bevelSegments: 4,
+      }
+
+  const geo = fontEntry.type === 'three'
+    ? new TextGeometry(text, {
+        font: fontEntry.font,
+        size: exportOpts.size,
+        height: exportOpts.height,
+        curveSegments: exportOpts.curveSegments,
+        bevelEnabled: exportOpts.bevelEnabled,
+        bevelThickness: exportOpts.bevelThickness,
+        bevelSize: exportOpts.bevelSize,
+        bevelOffset: exportOpts.bevelOffset,
+        bevelSegments: exportOpts.bevelSegments,
+      })
+    : buildOpenTypeGeometry(fontEntry.font, text, exportOpts)
+
+  geo.computeBoundingBox()
+  const bb = geo.boundingBox
+  geo.translate(
+    -(bb.max.x - bb.min.x) / 2,
+    -(bb.max.y - bb.min.y) / 2,
+    -(bb.max.z - bb.min.z) / 2,
+  )
+  geo.deleteAttribute('uv')
+  return geo
+}
+
+async function getFont(key) {
+  if (fontCache[key]) return fontCache[key]
+  const def = FONT_DEFS[key]
+  let fontEntry
+  if (def.type === 'three') {
+    const font = await new Promise((res, rej) => fontLoader.load(def.url, res, undefined, rej))
+    fontEntry = { type: 'three', font }
+  } else {
+    const buf   = await fetch(def.url).then(r => r.arrayBuffer())
+    const otFont = window.opentype.parse(buf)
+    fontEntry = { type: 'opentype', font: otFont }
+  }
+  fontCache[key] = fontEntry
+  return fontEntry
+}
+
+async function getSceneState() {
+  const builtInFontUrl = `${FONT_CDN}helvetiker_bold.typeface.json`
+  return {
+    text: document.getElementById('textInput').value || 'Chrome',
+    font: activeKey === '__custom__' && customFontData
+      ? {
+          type: 'upload',
+          name: customFontData.name,
+          ext: customFontData.ext,
+        }
+      : {
+          type: 'built-in',
+          key: activeKey,
+          label: FONT_DEFS[activeKey]?.label || 'Helvetica',
+          url: builtInFontUrl,
+        },
+    geometry: await serializeCurrentGeometryPacked(),
+    material: {
+      preset: currentPreset,
+      color: `#${mat.color.getHexString()}`,
+      roughness: mat.roughness,
+      reflectionBoost,
+      waviness: wavinessStrength,
+      envMapIntensity: mat.envMapIntensity,
+      clearcoat: mat.clearcoat,
+      clearcoatRoughness: mat.clearcoatRoughness,
+      metalness: mat.metalness,
+      reflectivity: mat.reflectivity,
+    },
+    post: {
+      bloom: bloom.strength,
+      stars: starPass.uniforms.strength.value,
+    },
+    camera: {
+      fov: 42,
+      near: camera.near,
+      far: camera.far,
+      position: [0, 0, 9],
+      target: [0, 0, 0],
+    },
+    lights: {
+      kl: { color: '#eef5ff', intensity: kl.intensity, position: kl.position.toArray() },
+      kr: { color: '#e0eeff', intensity: kr.intensity, position: kr.position.toArray() },
+      g1: { color: '#ffffff', intensity: g1.intensity, position: g1.position.toArray() },
+      g2: { color: '#ddeeff', intensity: g2.intensity, position: g2.position.toArray() },
+      ambient: { color: '#05050f', intensity: 2 },
+    },
+    transparentBackground: true,
+    cursorFollow: true,
+    followSpeed: 0.14,
+    followRange: 1,
+  }
+}
+
+function buildFramerComponentCode(state) {
+  const stateJson = JSON.stringify(state, null, 2)
+  const includeGlow = state.post.bloom > 0.01 || state.post.stars > 0.01
+  return `/**
+ * @framerSupportedLayoutWidth any-prefer-fixed
+ * @framerSupportedLayoutHeight any-prefer-fixed
+ * @framerIntrinsicWidth 720
+ * @framerIntrinsicHeight 360
+ */
+import * as React from "react"
+import * as THREE from "three"
+import { addPropertyControls, ControlType } from "framer"
+
+const SCENE_STATE = ${stateJson}
+
+const TYPED_ARRAYS = {
+  Float32Array,
+  Uint32Array,
+  Uint16Array,
+  Uint8Array,
+}
+
+function base64ToArrayBuffer(base64) {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes.buffer
+}
+
+async function loadBuiltInFontData() {
+  const response = await fetch(SCENE_STATE.font.url)
+  if (!response.ok) throw new Error("Could not load built-in font data")
+  return response.json()
+}
+
+function buildStudioEnv() {
+  const W = 2048, H = 1024
+  const cv = document.createElement("canvas")
+  cv.width = W
+  cv.height = H
+  const cx = cv.getContext("2d")
+
+  cx.fillStyle = "#03030a"
+  cx.fillRect(0, 0, W, H)
+
+  cx.save()
+  cx.shadowBlur = 220
+  cx.shadowColor = "rgba(215, 228, 255, 1)"
+  cx.fillStyle = "rgba(245, 252, 255, 1)"
+  cx.fillRect(W * 0.04, H * 0.08, W * 0.20, H * 0.28)
+  cx.restore()
+
+  cx.save()
+  cx.shadowBlur = 200
+  cx.shadowColor = "rgba(195, 215, 255, 0.95)"
+  cx.fillStyle = "rgba(225, 240, 255, 0.95)"
+  cx.fillRect(W * 0.76, H * 0.08, W * 0.20, H * 0.25)
+  cx.restore()
+
+  cx.save()
+  cx.shadowBlur = 100
+  cx.shadowColor = "rgba(180, 200, 255, 0.6)"
+  cx.fillStyle = "rgba(200, 220, 255, 0.5)"
+  cx.fillRect(W * 0.36, H * 0.02, W * 0.28, H * 0.04)
+  cx.restore()
+
+  const addWindowBank = (x, y, w, h, alpha = 1) => {
+    cx.save()
+    cx.shadowBlur = 130
+    cx.shadowColor = \`rgba(215, 232, 255, \${0.7 * alpha})\`
+    cx.fillStyle = \`rgba(236, 245, 255, \${0.55 * alpha})\`
+    cx.fillRect(x, y, w, h)
+
+    cx.globalCompositeOperation = "destination-out"
+    cx.fillStyle = "rgba(0,0,0,0.95)"
+    cx.fillRect(x + w * 0.18, y, w * 0.035, h)
+    cx.fillRect(x + w * 0.48, y, w * 0.035, h)
+    cx.fillRect(x + w * 0.78, y, w * 0.035, h)
+    cx.fillRect(x, y + h * 0.46, w, h * 0.05)
+    cx.restore()
+  }
+
+  addWindowBank(W * 0.16, H * 0.19, W * 0.18, H * 0.30, 0.95)
+  addWindowBank(W * 0.67, H * 0.16, W * 0.16, H * 0.27, 0.82)
+
+  const leftStreak = cx.createLinearGradient(W * 0.08, 0, W * 0.23, 0)
+  leftStreak.addColorStop(0, "rgba(255,255,255,0)")
+  leftStreak.addColorStop(0.45, "rgba(220,235,255,0.34)")
+  leftStreak.addColorStop(1, "rgba(255,255,255,0)")
+  cx.fillStyle = leftStreak
+  cx.fillRect(W * 0.07, H * 0.10, W * 0.18, H * 0.78)
+
+  const rightStreak = cx.createLinearGradient(W * 0.9, 0, W * 0.75, 0)
+  rightStreak.addColorStop(0, "rgba(255,255,255,0)")
+  rightStreak.addColorStop(0.5, "rgba(205,225,255,0.24)")
+  rightStreak.addColorStop(1, "rgba(255,255,255,0)")
+  cx.fillStyle = rightStreak
+  cx.fillRect(W * 0.74, H * 0.14, W * 0.18, H * 0.74)
+
+  const hz = cx.createLinearGradient(0, H * 0.46, 0, H * 0.54)
+  hz.addColorStop(0, "rgba(0,0,0,0)")
+  hz.addColorStop(0.5, "rgba(190, 210, 240, 0.75)")
+  hz.addColorStop(1, "rgba(0,0,0,0)")
+  cx.fillStyle = hz
+  cx.fillRect(0, H * 0.43, W, H * 0.14)
+
+  const floor = cx.createLinearGradient(0, H * 0.55, 0, H)
+  floor.addColorStop(0, "rgba(0,0,0,0)")
+  floor.addColorStop(1, "rgba(1,1,6,0.97)")
+  cx.fillStyle = floor
+  cx.fillRect(0, 0, W, H)
+
+  const sl = cx.createLinearGradient(0, 0, W * 0.25, 0)
+  sl.addColorStop(0, "rgba(0,0,0,0.5)")
+  sl.addColorStop(1, "rgba(0,0,0,0)")
+  cx.fillStyle = sl
+  cx.fillRect(0, 0, W * 0.25, H)
+
+  const sr = cx.createLinearGradient(W, 0, W * 0.75, 0)
+  sr.addColorStop(0, "rgba(0,0,0,0.4)")
+  sr.addColorStop(1, "rgba(0,0,0,0)")
+  cx.fillStyle = sr
+  cx.fillRect(W * 0.75, 0, W * 0.25, H)
+
+  const underGlow = cx.createRadialGradient(W * 0.5, H * 0.78, 0, W * 0.5, H * 0.78, W * 0.28)
+  underGlow.addColorStop(0, "rgba(175, 200, 255, 0.22)")
+  underGlow.addColorStop(1, "rgba(0,0,0,0)")
+  cx.fillStyle = underGlow
+  cx.fillRect(W * 0.18, H * 0.56, W * 0.64, H * 0.35)
+
+  return cv
+}
+
+function createGeometryFromState() {
+  const geo = new THREE.BufferGeometry()
+  const packedPosition = new TYPED_ARRAYS[SCENE_STATE.geometry.position.type](base64ToArrayBuffer(SCENE_STATE.geometry.position.base64))
+  const unpackedPosition = new Float32Array(packedPosition.length)
+  const min = SCENE_STATE.geometry.position.min
+  const max = SCENE_STATE.geometry.position.max
+  const range = [
+    Math.max(max[0] - min[0], 1e-6),
+    Math.max(max[1] - min[1], 1e-6),
+    Math.max(max[2] - min[2], 1e-6),
+  ]
+  for (let i = 0; i < packedPosition.length; i += 3) {
+    unpackedPosition[i] = min[0] + (packedPosition[i] / 65535) * range[0]
+    unpackedPosition[i + 1] = min[1] + (packedPosition[i + 1] / 65535) * range[1]
+    unpackedPosition[i + 2] = min[2] + (packedPosition[i + 2] / 65535) * range[2]
+  }
+  geo.setAttribute("position", new THREE.BufferAttribute(unpackedPosition, SCENE_STATE.geometry.position.itemSize))
+  if (SCENE_STATE.geometry.normal) {
+    const normalArray = new TYPED_ARRAYS[SCENE_STATE.geometry.normal.type](base64ToArrayBuffer(SCENE_STATE.geometry.normal.base64))
+    geo.setAttribute("normal", new THREE.BufferAttribute(normalArray, SCENE_STATE.geometry.normal.itemSize))
+  } else {
+    geo.computeVertexNormals()
+  }
+  if (SCENE_STATE.geometry.uv) {
+    const uvArray = new TYPED_ARRAYS[SCENE_STATE.geometry.uv.type](base64ToArrayBuffer(SCENE_STATE.geometry.uv.base64))
+    geo.setAttribute("uv", new THREE.BufferAttribute(uvArray, SCENE_STATE.geometry.uv.itemSize))
+  }
+  if (SCENE_STATE.geometry.index) {
+    const indexArray = new TYPED_ARRAYS[SCENE_STATE.geometry.index.type](base64ToArrayBuffer(SCENE_STATE.geometry.index.base64))
+    geo.setIndex(new THREE.BufferAttribute(indexArray, 1))
+  }
+  geo.computeBoundingBox()
+  geo.computeBoundingSphere()
+  return geo
+}
+
+function buildShapesFromTypeface(text, fontData, size = 1.5) {
+  const chars = String(text || "").split("")
+  const scale = size / fontData.resolution
+  let offsetX = 0
+  const allShapes = []
+
+  for (const ch of chars) {
+    const glyph = fontData.glyphs[ch] || fontData.glyphs["?"]
+    if (!glyph) continue
+
+    const outline = (glyph.o || "").trim()
+    if (!outline) {
+      offsetX += (glyph.ha || fontData.boundingBox.yMax) * scale
+      continue
+    }
+
+    const path = new THREE.ShapePath()
+    const tokens = outline.split(" ")
+    let i = 0
+    while (i < tokens.length) {
+      const action = tokens[i++]
+      switch (action) {
+        case "m": {
+          const x = Number(tokens[i++]) * scale + offsetX
+          const y = Number(tokens[i++]) * scale
+          path.moveTo(x, y)
+          break
+        }
+        case "l": {
+          const x = Number(tokens[i++]) * scale + offsetX
+          const y = Number(tokens[i++]) * scale
+          path.lineTo(x, y)
+          break
+        }
+        case "q": {
+          const cpx = Number(tokens[i++]) * scale + offsetX
+          const cpy = Number(tokens[i++]) * scale
+          const x = Number(tokens[i++]) * scale + offsetX
+          const y = Number(tokens[i++]) * scale
+          path.quadraticCurveTo(cpx, cpy, x, y)
+          break
+        }
+        case "b": {
+          const cp1x = Number(tokens[i++]) * scale + offsetX
+          const cp1y = Number(tokens[i++]) * scale
+          const cp2x = Number(tokens[i++]) * scale + offsetX
+          const cp2y = Number(tokens[i++]) * scale
+          const x = Number(tokens[i++]) * scale + offsetX
+          const y = Number(tokens[i++]) * scale
+          path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+          break
+        }
+      }
+    }
+
+    allShapes.push(...path.toShapes())
+    offsetX += (glyph.ha || fontData.boundingBox.yMax) * scale
+  }
+
+  return allShapes
+}
+
+function createLiveTextGeometry(text, fontData, size = 1.5) {
+  const shapes = buildShapesFromTypeface(text, fontData, size)
+  const geo = new THREE.ExtrudeGeometry(shapes, {
+    depth: 0.5,
+    curveSegments: 8,
+    bevelEnabled: true,
+    bevelThickness: 0.09,
+    bevelSize: 0.055,
+    bevelOffset: 0,
+    bevelSegments: 4,
+  })
+  geo.computeBoundingBox()
+  const bb = geo.boundingBox
+  geo.translate(
+    -(bb.max.x - bb.min.x) / 2,
+    -(bb.max.y - bb.min.y) / 2,
+    -(bb.max.z - bb.min.z) / 2
+  )
+  geo.computeVertexNormals()
+  return geo
+}
+
+function createChromeMaterial(state) {
+  const material = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(state.material.color),
+    metalness: state.material.metalness,
+    roughness: state.material.roughness,
+    envMapIntensity: state.material.envMapIntensity,
+    clearcoat: state.material.clearcoat,
+    clearcoatRoughness: state.material.clearcoatRoughness,
+    reflectivity: state.material.reflectivity,
+  })
+
+  material.onBeforeCompile = shader => {
+    shader.uniforms.uWaviness = { value: state.material.waviness }
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", \`#include <common>
+      varying vec3 vWorldPos;
+      varying vec3 vObjPos;\`)
+      .replace("#include <worldpos_vertex>", \`#include <worldpos_vertex>
+      vWorldPos = worldPosition.xyz;
+      vObjPos = position;\`)
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", \`#include <common>
+      uniform float uWaviness;
+      varying vec3 vWorldPos;
+      varying vec3 vObjPos;
+
+      float flowField(vec3 p) {
+        float a = sin(p.x * 2.2 + sin(p.y * 1.8) * 1.4);
+        float b = sin(p.y * 2.7 + cos(p.z * 2.1) * 1.2);
+        float c = sin((p.x + p.y + p.z) * 1.8 + sin((p.x - p.z) * 1.9) * 0.9);
+        float d = cos((p.x * 2.9 - p.y * 1.7 + p.z * 1.3));
+        return a * 0.34 + b * 0.28 + c * 0.24 + d * 0.14;
+      }
+
+      vec3 flowNormal(vec3 p, vec3 baseNormal) {
+        float e = 0.03;
+        float center = flowField(p);
+        float dx = flowField(p + vec3(e, 0.0, 0.0)) - center;
+        float dy = flowField(p + vec3(0.0, e, 0.0)) - center;
+        float dz = flowField(p + vec3(0.0, 0.0, e)) - center;
+        vec3 grad = vec3(dx, dy, dz) / e;
+        vec3 warped = normalize(baseNormal + grad * uWaviness * 1.35);
+        return faceforward(warped, -vViewPosition, baseNormal);
+      }\`)
+      .replace("#include <normal_fragment_begin>", \`#include <normal_fragment_begin>
+      vec3 flowPos = vObjPos * 1.15 + vWorldPos * 0.08;
+      normal = flowNormal(flowPos, normal);\`)
+  }
+
+  material.customProgramCacheKey = () => "chrome-flow-v1"
+  return material
+}
+
+export default function Chrome30(props) {
+  const {
+    text = SCENE_STATE.text,
+    cursorFollow = SCENE_STATE.cursorFollow,
+    followSpeed = SCENE_STATE.followSpeed,
+    followRange = SCENE_STATE.followRange,
+    size = 1,
+  } = props
+
+  const mountRef = React.useRef(null)
+
+  React.useEffect(() => {
+    const mount = mountRef.current
+    if (!mount) return
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setSize(Math.max(mount.clientWidth, 2), Math.max(mount.clientHeight, 2))
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.1
+    renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.setClearColor(0x000000, 0)
+    mount.appendChild(renderer.domElement)
+
+    const scene = new THREE.Scene()
+    scene.background = null
+
+    const camera = new THREE.PerspectiveCamera(
+      SCENE_STATE.camera.fov,
+      mount.clientWidth / mount.clientHeight,
+      SCENE_STATE.camera.near,
+      SCENE_STATE.camera.far
+    )
+    camera.position.fromArray(SCENE_STATE.camera.position)
+    const lookTarget = new THREE.Vector3(...SCENE_STATE.camera.target)
+    camera.lookAt(lookTarget)
+
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    const envTex = new THREE.CanvasTexture(buildStudioEnv())
+    envTex.mapping = THREE.EquirectangularReflectionMapping
+    scene.environment = pmrem.fromEquirectangular(envTex).texture
+    envTex.dispose()
+    pmrem.dispose()
+
+    const material = createChromeMaterial(SCENE_STATE)
+    const textGroup = new THREE.Group()
+    scene.add(textGroup)
+
+    const lightDefs = SCENE_STATE.lights
+    const kl = new THREE.PointLight(lightDefs.kl.color, lightDefs.kl.intensity, 0, 2.5)
+    kl.position.fromArray(lightDefs.kl.position)
+    scene.add(kl)
+    const kr = new THREE.PointLight(lightDefs.kr.color, lightDefs.kr.intensity, 0, 2.5)
+    kr.position.fromArray(lightDefs.kr.position)
+    scene.add(kr)
+    const g1 = new THREE.PointLight(lightDefs.g1.color, lightDefs.g1.intensity, 0, 3.5)
+    g1.position.fromArray(lightDefs.g1.position)
+    scene.add(g1)
+    const g2 = new THREE.PointLight(lightDefs.g2.color, lightDefs.g2.intensity, 0, 3.5)
+    g2.position.fromArray(lightDefs.g2.position)
+    scene.add(g2)
+    scene.add(new THREE.AmbientLight(lightDefs.ambient.color, lightDefs.ambient.intensity))
+
+    let textMesh = null
+    let disposed = false
+    const cleanupMesh = () => {
+      if (!textMesh) return
+      textGroup.remove(textMesh)
+      textMesh.geometry.dispose()
+      textMesh = null
+    }
+
+    const buildMesh = geometry => {
+      cleanupMesh()
+      textMesh = new THREE.Mesh(geometry, material)
+      textGroup.add(textMesh)
+      fitTextToFrame()
+    }
+
+    const fitTextToFrame = () => {
+      if (!textMesh) return
+      textGroup.position.set(0, 0, 0)
+      textGroup.scale.setScalar(1)
+      textMesh.rotation.set(0, 0, 0)
+
+      const box = new THREE.Box3().setFromObject(textGroup)
+      const sizeVec = box.getSize(new THREE.Vector3())
+      if (sizeVec.x <= 0 || sizeVec.y <= 0) return
+
+      const distance = Math.max(camera.position.z - textGroup.position.z, 0.1)
+      const vFov = THREE.MathUtils.degToRad(camera.fov)
+      const visibleHeight = 2 * Math.tan(vFov / 2) * distance
+      const visibleWidth = visibleHeight * camera.aspect
+      const fitScale = Math.min(
+        (visibleWidth * 0.88) / sizeVec.x,
+        (visibleHeight * 0.42) / sizeVec.y
+      )
+
+      textGroup.scale.setScalar(Math.max(fitScale, 0.001))
+      const fittedBox = new THREE.Box3().setFromObject(textGroup)
+      const center = fittedBox.getCenter(new THREE.Vector3())
+      textGroup.position.set(-center.x, -center.y, -center.z)
+    }
+
+    const buildCurrentText = async () => {
+      if (SCENE_STATE.font.type === "built-in" && text !== SCENE_STATE.text) {
+        const fontData = await loadBuiltInFontData()
+        if (disposed) return
+        buildMesh(createLiveTextGeometry(text, fontData, 1.5 * size))
+        return
+      }
+      if (SCENE_STATE.geometry) {
+        const geometry = createGeometryFromState()
+        geometry.scale(size, size, size)
+        buildMesh(geometry)
+        return
+      }
+      const fontData = await loadBuiltInFontData()
+      if (disposed) return
+      buildMesh(createLiveTextGeometry(text, fontData, 1.5 * size))
+    }
+
+    buildCurrentText().catch(error => console.error("Framer text build failed", error))
+
+    let targetX = 0
+    let targetY = 0
+    const onPointerMove = event => {
+      if (!cursorFollow || !textMesh) return
+      const rect = mount.getBoundingClientRect()
+      const x = (event.clientX - rect.left) / rect.width - 0.5
+      const y = (event.clientY - rect.top) / rect.height - 0.5
+      targetX = x * 0.28 * followRange
+      targetY = -y * 0.18 * followRange
+    }
+    mount.addEventListener("pointermove", onPointerMove)
+
+    const onResize = () => {
+      const width = Math.max(mount.clientWidth, 2)
+      const height = Math.max(mount.clientHeight, 2)
+      camera.aspect = width / height
+      camera.updateProjectionMatrix()
+      renderer.setSize(width, height)
+      fitTextToFrame()
+    }
+    window.addEventListener("resize", onResize)
+    const resizeObserver = new ResizeObserver(() => onResize())
+    resizeObserver.observe(mount)
+
+    let raf = 0
+    const loop = () => {
+      raf = requestAnimationFrame(loop)
+      if (textMesh) {
+        if (!cursorFollow) {
+          textMesh.rotation.x = 0
+          textMesh.rotation.y = 0
+        } else {
+          textMesh.rotation.y += (targetX - textMesh.rotation.y) * followSpeed
+          textMesh.rotation.x += (targetY - textMesh.rotation.x) * followSpeed
+        }
+      }
+      renderer.render(scene, camera)
+    }
+    loop()
+
+    return () => {
+      disposed = true
+      cancelAnimationFrame(raf)
+      window.removeEventListener("resize", onResize)
+      resizeObserver.disconnect()
+      mount.removeEventListener("pointermove", onPointerMove)
+      cleanupMesh()
+      scene.remove(textGroup)
+      material.dispose()
+      renderer.dispose()
+      if (scene.environment) scene.environment.dispose()
+      if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement)
+    }
+  }, [text, cursorFollow, followSpeed, followRange, size])
+
+  return (
+    <div
+      ref={mountRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        minWidth: 2,
+        minHeight: 2,
+        background: "transparent",
+${includeGlow ? `        filter: "drop-shadow(0 0 ${Math.max(8, Math.round(state.post.bloom * 36))}px rgba(255,255,255,${Math.min(0.42, 0.10 + state.post.stars * 0.08).toFixed(2)}))",` : ''}
+      }}
+    />
+  )
+}
+
+Chrome30.defaultProps = {
+  text: SCENE_STATE.text,
+  cursorFollow: SCENE_STATE.cursorFollow,
+  followSpeed: SCENE_STATE.followSpeed,
+  followRange: SCENE_STATE.followRange,
+  size: 1,
+}
+
+addPropertyControls(Chrome30, {
+  text: { type: ControlType.String, title: "Text", defaultValue: SCENE_STATE.text },
+  cursorFollow: { type: ControlType.Boolean, title: "Cursor", defaultValue: SCENE_STATE.cursorFollow },
+  size: {
+    type: ControlType.Number,
+    title: "Size",
+    min: 0.5,
+    max: 2.5,
+    step: 0.05,
+    defaultValue: 1,
+  },
+  followSpeed: {
+    type: ControlType.Number,
+    title: "Speed",
+    min: 0,
+    max: 0.35,
+    step: 0.01,
+    defaultValue: SCENE_STATE.followSpeed,
+    hidden: props => !props.cursorFollow,
+  },
+  followRange: {
+    type: ControlType.Number,
+    title: "Range",
+    min: 0,
+    max: 2,
+    step: 0.05,
+    defaultValue: SCENE_STATE.followRange,
+    hidden: props => !props.cursorFollow,
+  },
+})
+`
+}
+
+function openExportModal() {
+  refreshExportCode()
+  const modal = document.getElementById('exportModal')
+  modal.classList.add('open')
+  modal.setAttribute('aria-hidden', 'false')
+}
+
+function closeExportModal() {
+  const modal = document.getElementById('exportModal')
+  modal.classList.remove('open')
+  modal.setAttribute('aria-hidden', 'true')
+}
+
+async function copyExportCode() {
+  await refreshExportCode()
+  if (!currentExportCode) return
+  try {
+    await navigator.clipboard.writeText(currentExportCode)
+    document.getElementById('exportStatus').textContent = 'Copied'
+  } catch (err) {
+    const field = document.getElementById('exportCode')
+    field.focus()
+    field.select()
+    document.execCommand('copy')
+    document.getElementById('exportStatus').textContent = 'Copied'
+  }
+}
+
+async function refreshExportCode() {
+  document.getElementById('exportStatus').textContent = 'Generating...'
+  document.getElementById('exportCode').value = '// Preparing Framer component...'
+  await nextFrame()
+  const state = await getSceneState()
+  if (state.font.type === 'upload' && !state.geometry) {
+    currentExportCode = ''
+    document.getElementById('exportCode').value = '// Geometry is still loading. Try again in a moment.'
+    document.getElementById('exportStatus').textContent = 'Waiting'
+    return
+  }
+  currentExportCode = buildFramerComponentCode(state)
+  document.getElementById('exportCode').value = currentExportCode
+  document.getElementById('exportStatus').textContent = 'Ready'
+}
+
+function syncExportModalIfOpen() {
+  const modal = document.getElementById('exportModal')
+  if (!modal.classList.contains('open')) return
+  refreshExportCode()
+}
+
+// ─── Text mesh ────────────────────────────────────────────────────────────────
+let textMesh  = null
+let activeKey = 'helvetica'
+let debounce  = null
+function rebuildText(str) {
+  const fontEntry = fontCache[activeKey]
+  if (!fontEntry) return
+  const text = str.trim() || 'Chrome'
+
+  if (textMesh) { scene.remove(textMesh); textMesh.geometry.dispose(); textMesh = null }
+
+  const geo = fontEntry.type === 'three'
+    ? new TextGeometry(text, {
+        font: fontEntry.font,
+        size: 1.5,
+        height: 0.5,
+        curveSegments: 22,
+        bevelEnabled: true,
+        bevelThickness: 0.09,
+        bevelSize: 0.055,
+        bevelOffset: 0,
+        bevelSegments: 16,
+      })
+    : buildOpenTypeGeometry(fontEntry.font, text)
+
+  geo.computeBoundingBox()
+  const bb = geo.boundingBox
+  geo.translate(
+    -(bb.max.x - bb.min.x) / 2,
+    -(bb.max.y - bb.min.y) / 2,
+    -(bb.max.z - bb.min.z) / 2,
+  )
+
+  textMesh = new THREE.Mesh(geo, mat)
+  scene.add(textMesh)
+}
+
+async function switchFont(key) {
+  showLoading(true)
+  activeKey = key
+  try {
+    await getFont(key)
+    rebuildText(document.getElementById('textInput').value || 'Chrome')
+    syncExportModalIfOpen()
+  } catch (e) { console.error('Font load failed:', e) }
+  showLoading(false)
+}
+
+switchFont('helvetica')
+
+// ─── Text input ───────────────────────────────────────────────────────────────
+document.getElementById('textInput').addEventListener('input', e => {
+  clearTimeout(debounce)
+  debounce = setTimeout(() => rebuildText(e.target.value), 60)
+  syncExportModalIfOpen()
+})
+
+// ─── Font dropdown ────────────────────────────────────────────────────────────
+const selector = document.getElementById('fontSelector')
+const menu     = document.getElementById('fontMenu')
+const current  = document.getElementById('fontCurrent')
+
+selector.addEventListener('click', e => {
+  e.stopPropagation()
+  menu.classList.toggle('open')
+})
+
+document.addEventListener('click', () => menu.classList.remove('open'))
+
+document.querySelectorAll('.font-opt').forEach(opt => {
+  opt.addEventListener('click', e => {
+    e.stopPropagation()
+    const key = opt.dataset.key
+    document.querySelectorAll('.font-opt').forEach(o => o.classList.remove('active'))
+    opt.classList.add('active')
+    current.textContent = FONT_DEFS[key].label
+    menu.classList.remove('open')
+    switchFont(key)
+  })
+})
+
+// ─── Custom font upload ───────────────────────────────────────────────────────
+document.getElementById('fontFile').addEventListener('change', async e => {
+  const file = e.target.files[0]
+  if (!file) return
+  showLoading(true)
+  try {
+    const buf    = await file.arrayBuffer()
+    const otFont = window.opentype.parse(buf)
+    const key    = '__custom__'
+    fontCache[key] = { type: 'opentype', font: otFont }
+    customFontData = {
+      name: file.name.replace(/\.[^.]+$/, ''),
+      ext: (file.name.match(/\.([^.]+)$/)?.[1] || '').toLowerCase(),
+      base64: arrayBufferToBase64(buf),
+    }
+
+    // Add or update option in menu
+    let opt = document.querySelector('.font-opt[data-key="__custom__"]')
+    if (!opt) {
+      opt = document.createElement('div')
+      opt.className = 'font-opt'
+      opt.dataset.key = '__custom__'
+      menu.appendChild(opt)
+      opt.addEventListener('click', e => {
+        e.stopPropagation()
+        document.querySelectorAll('.font-opt').forEach(o => o.classList.remove('active'))
+        opt.classList.add('active')
+        current.textContent = opt.textContent
+        menu.classList.remove('open')
+        switchFont('__custom__')
+      })
+    }
+    const name = customFontData.name
+    opt.textContent = name
+    document.querySelectorAll('.font-opt').forEach(o => o.classList.remove('active'))
+    opt.classList.add('active')
+    current.textContent = name
+
+    activeKey = key
+    rebuildText(document.getElementById('textInput').value || 'Chrome')
+    syncExportModalIfOpen()
+  } catch (err) {
+    console.error(err)
+    alert('Could not parse font. Make sure it is a valid TTF or OTF file.')
+  }
+  showLoading(false)
+  e.target.value = ''
+})
+
+// ─── Controls ─────────────────────────────────────────────────────────────────
+function bindSlider(id, valId, decimals, fn) {
+  const el = document.getElementById(id)
+  const vl = document.getElementById(valId)
+  el.addEventListener('input', () => {
+    const v = parseFloat(el.value)
+    vl.textContent = v.toFixed(decimals)
+    fn(v)
+    syncExportModalIfOpen()
+  })
+}
+
+bindSlider('roughness',  'roughnessVal',  2, v => {
+  mat.roughness = v
+  syncMaterialResponse()
+})
+bindSlider('reflection', 'reflectionVal', 2, v => {
+  reflectionBoost = v
+  syncMaterialResponse()
+})
+bindSlider('waviness',   'wavinessVal',   2, v => {
+  wavinessStrength = v
+  if (mat.userData.shader) mat.userData.shader.uniforms.uWaviness.value = v
+})
+bindSlider('bloomCtrl',  'bloomVal',      2, v => bloom.strength = v)
+bindSlider('starsCtrl',  'starsVal',      2, v => starPass.uniforms.strength.value = v)
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    currentPreset = btn.dataset.preset
+    mat.color.copy(PRESETS[btn.dataset.preset])
+    mat.needsUpdate = true
+    syncExportModalIfOpen()
+  })
+})
+
+// ─── 3D Export helpers ────────────────────────────────────────────────────────
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = filename
+  document.body.appendChild(a); a.click(); document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 2000)
+}
+
+function getExportName() {
+  const raw = (document.getElementById('textInput').value || 'chrome').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '')
+  return raw || 'chrome'
+}
+
+async function exportGLTF() {
+  if (!textMesh) return
+  showLoading(true)
+  try {
+    // Fresh material without onBeforeCompile so exporter reads clean PBR properties
+    const exportMat = new THREE.MeshPhysicalMaterial({
+      color:              mat.color.clone(),
+      metalness:          mat.metalness,
+      roughness:          mat.roughness,
+      envMapIntensity:    mat.envMapIntensity,
+      clearcoat:          mat.clearcoat,
+      clearcoatRoughness: mat.clearcoatRoughness,
+      reflectivity:       mat.reflectivity,
+    })
+    const exportMesh = new THREE.Mesh(textMesh.geometry, exportMat)
+    const exporter = new GLTFExporter()
+    const result = await new Promise((resolve, reject) =>
+      exporter.parse(exportMesh, resolve, reject, { binary: true })
+    )
+    triggerDownload(new Blob([result], { type: 'application/octet-stream' }), `${getExportName()}.glb`)
+    exportMat.dispose()
+  } catch (e) { console.error('GLTF export failed:', e) }
+  showLoading(false)
+}
+
+async function exportPNG() {
+  if (!textMesh) return
+  showLoading(true)
+  try {
+    const name = getExportName()
+    const W = innerWidth  * 2
+    const H = innerHeight * 2
+
+    const prevBg  = scene.background
+    const prevEnv = scene.environment
+    const prevCC  = renderer.getClearColor(new THREE.Color())
+    const prevCA  = renderer.getClearAlpha()
+
+    // ── Pass 1: alpha mask — transparent direct render on main renderer ────────
+    const maskRt = new THREE.WebGLRenderTarget(W, H)
+    scene.background = null
+    renderer.setClearColor(0, 0)
+    renderer.setRenderTarget(maskRt)
+    renderer.clear()
+    renderer.render(scene, camera)
+    renderer.setRenderTarget(null)
+    scene.background = prevBg
+    renderer.setClearColor(prevCC, prevCA)
+
+    const maskPx = new Uint8Array(W * H * 4)
+    renderer.readRenderTargetPixels(maskRt, 0, 0, W, H, maskPx)
+    maskRt.dispose()
+
+    // ── Pass 2: full bloom render on separate off-screen renderer ─────────────
+    const off = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+    off.setPixelRatio(1)
+    off.setSize(W, H)
+    off.toneMapping       = THREE.ACESFilmicToneMapping
+    off.toneMappingExposure = 1.1
+    off.outputColorSpace  = THREE.SRGBColorSpace
+
+    // Rebuild env for the new GL context
+    const offPmrem  = new THREE.PMREMGenerator(off)
+    const offEnvTex = new THREE.CanvasTexture(buildStudioEnv())
+    offEnvTex.mapping = THREE.EquirectangularReflectionMapping
+    const offEnv = offPmrem.fromEquirectangular(offEnvTex).texture
+    offEnvTex.dispose(); offPmrem.dispose()
+
+    scene.environment = offEnv
+    scene.background  = new THREE.Color(0x000000)
+    mat.needsUpdate   = true  // recompile waviness shader for new context
+
+    const oc = new EffectComposer(off)
+    oc.addPass(new RenderPass(scene, camera))
+    const ob = new UnrealBloomPass(new THREE.Vector2(W, H), bloom.strength, bloom.radius, bloom.threshold)
+    oc.addPass(ob)
+    const os = new ShaderPass(StarShader)
+    os.uniforms.strength.value  = starPass.uniforms.strength.value
+    os.uniforms.threshold.value = starPass.uniforms.threshold.value
+    os.uniforms.aspect.value    = W / H
+    oc.addPass(os)
+    oc.addPass(new OutputPass())
+    oc.render()
+
+    // Restore scene to main context
+    scene.environment = prevEnv
+    scene.background  = prevBg
+    mat.needsUpdate   = true
+    offEnv.dispose()
+
+    // ── Combine: bloom canvas RGB + geometry alpha from mask ──────────────────
+    const canvas = document.createElement('canvas')
+    canvas.width = W; canvas.height = H
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(off.domElement, 0, 0)   // bloom render is already top-down
+    off.dispose()
+
+    const px = ctx.getImageData(0, 0, W, H)
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const di = (y * W + x) * 4
+        const si = ((H - 1 - y) * W + x) * 4  // flip y — GL is bottom-up
+        px.data[di + 3] = maskPx[si + 3]
+      }
+    }
+    ctx.putImageData(px, 0, 0)
+
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = `${name}.png`
+    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+  } catch (e) { console.error('PNG export failed:', e) }
+  showLoading(false)
+}
+
+async function exportOBJ() {
+  if (!textMesh) return
+  showLoading(true)
+  try {
+    const name = getExportName()
+    let objStr = new OBJExporter().parse(textMesh)
+    objStr = `mtllib ${name}.mtl\n` + objStr.replace(/^usemtl .+$/m, 'usemtl chrome')
+
+    const c = mat.color
+    const mtlStr = [
+      '# Chrome Type export',
+      'newmtl chrome',
+      `Ka ${c.r.toFixed(4)} ${c.g.toFixed(4)} ${c.b.toFixed(4)}`,
+      `Kd ${c.r.toFixed(4)} ${c.g.toFixed(4)} ${c.b.toFixed(4)}`,
+      `Ks 1.0000 1.0000 1.0000`,
+      `Ns ${Math.round((1 - mat.roughness) * 900 + 10)}`,
+      `d 1.0000`,
+      `illum 3`,
+      `Pm ${mat.metalness.toFixed(4)}`,
+      `Pr ${mat.roughness.toFixed(4)}`,
+      `Pc ${mat.clearcoat.toFixed(4)}`,
+      `Pcr ${mat.clearcoatRoughness.toFixed(4)}`,
+    ].join('\n')
+
+    const zip = new JSZip()
+    zip.file(`${name}.obj`, objStr)
+    zip.file(`${name}.mtl`, mtlStr)
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
+    triggerDownload(blob, `${name}.zip`)
+  } catch (e) { console.error('OBJ export failed:', e) }
+  showLoading(false)
+}
+
+// ─── Export dropdown ──────────────────────────────────────────────────────────
+const exportMenu = document.getElementById('exportMenu')
+document.getElementById('exportBtn').addEventListener('click', e => {
+  e.stopPropagation()
+  exportMenu.classList.toggle('open')
+})
+document.addEventListener('click', () => exportMenu.classList.remove('open'))
+exportMenu.addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]')
+  if (!btn) return
+  exportMenu.classList.remove('open')
+  const action = btn.dataset.action
+  if (action === 'framer') openExportModal()
+  else if (action === 'gltf') exportGLTF()
+  else if (action === 'obj') exportOBJ()
+  else if (action === 'png') exportPNG()
+})
+
+document.getElementById('closeModalBtn').addEventListener('click', closeExportModal)
+document.getElementById('copyCodeBtn').addEventListener('click', copyExportCode)
+document.getElementById('exportModal').addEventListener('click', e => {
+  if (e.target.id === 'exportModal') closeExportModal()
+})
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeExportModal()
+})
+
+// ─── Resize ───────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(innerWidth, innerHeight)
+  composer.setSize(innerWidth, innerHeight)
+  bloom.resolution.set(innerWidth, innerHeight)
+  starPass.uniforms.aspect.value = innerWidth / innerHeight
+})
+
+function showLoading(on) {
+  document.getElementById('loading').classList.toggle('hidden', !on)
+}
+
+// ─── Render loop ──────────────────────────────────────────────────────────────
+;(function loop() {
+  requestAnimationFrame(loop)
+  controls.update()
+  composer.render()
+})()
+</script>
+</body>
+</html>
