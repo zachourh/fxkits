@@ -27,58 +27,67 @@ body {
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
   font-size: 13px;
   height: 100vh;
-  display: flex;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── SIDEBAR ── */
+/* ── FLOATING PANEL ── */
 
-.sidebar {
-  width: 248px;
-  flex-shrink: 0;
-  background: var(--bg);
-  border-right: 1px solid var(--border);
+.panel {
+  position: fixed;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 220px;
+  max-height: 90vh;
+  background: rgba(9,9,11,0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  z-index: 10;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-.sidebar-top {
-  padding: 16px;
+.panel-header {
+  padding: 16px 16px 14px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
-.sidebar-top h1 {
+.panel-header h1 {
   font-family: 'Manrope', sans-serif;
-  font-size: 21px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
 }
 
-.sidebar-top p {
+.panel-header p {
   font-size: 11px;
   color: var(--text3);
   margin-top: 3px;
 }
 
-.sidebar-body {
+.panel-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-.sidebar-body::-webkit-scrollbar { width: 5px; }
-.sidebar-body::-webkit-scrollbar-track { background: var(--bg); }
-.sidebar-body::-webkit-scrollbar-thumb { background: var(--bg3); }
-.sidebar-body::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
 
-.sidebar-bottom {
-  padding: 14px;
+.panel-footer {
+  padding: 12px 14px;
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 /* ── TABS ── */
@@ -258,10 +267,11 @@ input[type="range"]::-moz-range-thumb {
 
 .btn-export:hover { background: #FDE047; }
 
-/* ── PREVIEW ───────────────────────────────────── */
+/* ── PREVIEW ── */
 
 .preview {
-  flex: 1;
+  position: fixed;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -282,13 +292,13 @@ input[type="range"]::-moz-range-thumb {
 
 <canvas id="hidden-canvas" style="display:none"></canvas>
 
-<div class="sidebar">
-  <div class="sidebar-top">
+<div class="panel">
+  <div class="panel-header">
     <h1>Halftone Simulator</h1>
     <p>Circle grid & halftone effects</p>
   </div>
 
-  <div class="sidebar-body">
+  <div class="panel-body">
 
     <div class="tabs">
       <div class="tab active" data-mode="char">Character</div>
@@ -366,7 +376,7 @@ input[type="range"]::-moz-range-thumb {
 
   </div>
 
-  <div class="sidebar-bottom">
+  <div class="panel-footer">
     <button class="btn-bake" id="btn-bake">Bake to Vector</button>
     <button class="btn-export" id="btn-export">Export SVG</button>
   </div>
