@@ -472,17 +472,6 @@
     </div>
 
 
-    <div class="section">
-      <div class="section-label">VISUAL WEIGHT</div>
-      <div class="toggle-row">
-        <span class="ctrl-lbl">Ultra Bold</span>
-        <button class="toggle on" id="t-ultraBold"><span class="toggle-knob"></span></button>
-      </div>
-      <div class="toggle-row">
-        <span class="ctrl-lbl">Drop Shadow</span>
-        <button class="toggle" id="t-textShadow"><span class="toggle-knob"></span></button>
-      </div>
-    </div>
 
     <div class="section">
       <div class="section-label">COLOR</div>
@@ -1051,15 +1040,6 @@ function initControls() {
     });
   });
 
-  // Toggles
-  ['ultraBold','textShadow'].forEach(k => {
-    document.getElementById(`t-${k}`).addEventListener('click', function() {
-      S[k] = !S[k];
-      this.classList.toggle('on', S[k]);
-      clearPreset();
-      render();
-    });
-  });
 
   // Color mode
   document.getElementById('r-colorMode').addEventListener('change', e => {
