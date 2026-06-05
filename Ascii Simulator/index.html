@@ -415,9 +415,11 @@
       <button class="btn btn-y" id="browse-btn">Browse Files</button>
     </div>
 
-    <div class="section" style="flex:1">
+    <div class="section">
       <div class="section-label">PRESETS</div>
-      <div id="presets-list"></div>
+      <select id="presets-list">
+        <option value="">Select a preset…</option>
+      </select>
     </div>
 
     <div class="section">
@@ -952,14 +954,15 @@ function reprocess() {
 // PRESETS
 // ═══════════════════════════════════════════════════
 function buildPresets() {
-  const list = document.getElementById('presets-list');
+  const sel = document.getElementById('presets-list');
   PRESETS.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'preset';
-    btn.dataset.name = p.name;
-    btn.innerHTML = `<div><span class="preset-name">${p.name}</span><span class="preset-desc">${p.desc}</span></div><span class="check">✓</span>`;
-    btn.addEventListener('click', () => applyPreset(p.name));
-    list.appendChild(btn);
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', e => {
+    if (e.target.value) applyPreset(e.target.value);
   });
 }
 
@@ -973,13 +976,11 @@ function applyPreset(name) {
 }
 
 function highlightPreset(name) {
-  document.querySelectorAll('.preset').forEach(b => {
-    b.classList.toggle('on', b.dataset.name === name);
-  });
+  document.getElementById('presets-list').value = name;
 }
 
 function clearPreset() {
-  document.querySelectorAll('.preset').forEach(b => b.classList.remove('on'));
+  document.getElementById('presets-list').value = '';
 }
 
 // ═══════════════════════════════════════════════════
