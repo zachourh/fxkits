@@ -153,13 +153,10 @@
     }
     .canvas-scroll {
       flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: auto;
-      padding: 32px;
+      position: relative;
+      overflow: hidden;
     }
-    #ascii-canvas { image-rendering: pixelated; display: block; }
+    #ascii-canvas { position: absolute; image-rendering: pixelated; display: block; transform-origin: center center; }
     #orig-preview { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
 
     .status-bar {
@@ -725,13 +722,15 @@ let userZoom  = 1;
 
 function applyCanvasTransform() {
   const scroll = document.getElementById('canvas-scroll');
-  const availW = scroll.clientWidth  - 64;
-  const availH = scroll.clientHeight - 64;
-  const scaleW = availW / (canvas.width  || 1);
-  const scaleH = availH / (canvas.height || 1);
+  const cx = scroll.clientWidth  / 2;
+  const cy = scroll.clientHeight / 2;
+  const scaleW = (scroll.clientWidth  - 80) / (canvas.width  || 1);
+  const scaleH = (scroll.clientHeight - 80) / (canvas.height || 1);
   const fit    = Math.min(scaleW, scaleH);
-  canvas.style.transform       = `scale(${Math.max(0.05, fit * userZoom)})`;
-  canvas.style.transformOrigin = 'center center';
+  const scale  = Math.max(0.05, fit * userZoom);
+  canvas.style.left      = `${cx - canvas.width  / 2}px`;
+  canvas.style.top       = `${cy - canvas.height / 2}px`;
+  canvas.style.transform = `scale(${scale})`;
 }
 
 // Matrix state
