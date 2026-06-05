@@ -471,13 +471,6 @@
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-label">TYPOGRAPHY</div>
-      <div class="ctrl">
-        <div class="ctrl-head"><span class="ctrl-lbl">Font Size</span><span class="ctrl-val" id="v-fontSize">9</span></div>
-        <input type="range" min="4" max="24" value="9" id="r-fontSize">
-      </div>
-    </div>
 
     <div class="section">
       <div class="section-label">VISUAL WEIGHT</div>
@@ -1040,7 +1033,6 @@ function initControls() {
 
   // Sliders that only need re-render (no reprocessing)
   const renderOnly = [
-    ['r-fontSize',       'v-fontSize',        'fontSize',        true ],
     ['r-animSpeed',      'v-animSpeed',       'animationSpeed',  false],
     ['r-effectIntensity','v-effectIntensity', 'effectIntensity', false],
   ];
