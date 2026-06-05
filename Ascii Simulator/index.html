@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASCII Art Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #09090B;
+      --bg2: #18181B;
+      --bg3: #27272A;
+      --border: rgba(39,39,42,0.6);
+      --text: #F4F4F5;
+      --text2: #A1A1AA;
+      --text3: #71717A;
+      --text4: #52525B;
+      --accent: #FACC15;
+      --accent2: #FDE047;
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+
+    /* ── SIDEBARS ── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex-shrink: 0;
+    }
+    .sidebar-left  { width: 248px; border-right: 1px solid var(--border); }
+    .sidebar-right { width: 284px; border-left:  1px solid var(--border); }
+
+    .section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text4);
+      font-weight: 600;
+    }
+
+    /* ── HEADER ── */
+    .app-header { padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .app-header h1 {
+      font-family: 'Manrope', sans-serif;
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .app-header p { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+    /* ── UPLOAD ── */
+    .upload-zone {
+      border: 2px dashed var(--bg3);
+      border-radius: 2px;
+      padding: 22px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      text-align: center;
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(250,204,21,.04); }
+    .upload-zone svg { color: var(--text3); }
+    .upload-zone p  { font-size: 13px; color: #D4D4D8; }
+    .upload-zone span { font-size: 11px; color: var(--text3); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      border-radius: 2px;
+      font-size: 13px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .1s, border-color .1s;
+      padding: 8px 16px;
+      width: 100%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+    .btn-y  { background: var(--accent); color: #000; }
+    .btn-y:hover { background: var(--accent2); }
+    .btn-o  { background: transparent; color: var(--text); border: 1px solid #3F3F46; }
+    .btn-o:hover { background: var(--bg2); }
+    .btn-o.on { background: var(--bg3); border-color: #52525B; }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* ── PRESETS ── */
+    .preset {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 2px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: all .1s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #D4D4D8;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .preset:hover { background: var(--bg2); }
+    .preset.on { background: var(--bg3); border-color: #52525B; }
+    .preset-name { font-size: 13px; font-weight: 500; display: block; }
+    .preset-desc { font-size: 11px; color: var(--text3); margin-top: 2px; display: block; }
+    .check { color: var(--accent); font-size: 13px; display: none; }
+    .preset.on .check { display: block; }
+
+    /* ── CANVAS AREA ── */
+    .canvas-area {
+      flex: 1;
+      background: #050505;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+    .canvas-scroll {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      padding: 32px;
+    }
+    #ascii-canvas { image-rendering: pixelated; display: block; }
+    #orig-preview { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
+
+    .status-bar {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: rgba(24,24,27,.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--bg3);
+      border-radius: 2px;
+      padding: 5px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text3);
+      white-space: nowrap;
+    }
+    .sep { color: var(--bg3); }
+    .live { color: var(--accent); }
+
+    /* ── RIGHT SIDEBAR CONTROLS ── */
+    .ctrl { display: flex; flex-direction: column; gap: 7px; }
+    .ctrl-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .ctrl-lbl { font-size: 13px; color: #D4D4D8; }
+    .ctrl-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 0;
+      background: var(--bg3);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 16px;
+      border-radius: 2px;
+      background: #D4D4D8;
+      cursor: pointer;
+      transition: background .1s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { background: #fff; }
+    input[type="range"]::-moz-range-thumb {
+      width: 12px; height: 16px;
+      border-radius: 2px;
+      background: #D4D4D8;
+      border: none;
+      cursor: pointer;
+    }
+
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+    .toggle {
+      position: relative;
+      width: 44px; height: 24px;
+      background: var(--bg3);
+      border-radius: 2px;
+      border: none;
+      cursor: pointer;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle-knob {
+      position: absolute;
+      top: 4px; left: 4px;
+      width: 16px; height: 16px;
+      background: #fff;
+      border-radius: 2px;
+      transition: transform .15s;
+      pointer-events: none;
+    }
+    .toggle.on .toggle-knob { transform: translateX(20px); }
+
+    .color-row { display: flex; gap: 8px; align-items: center; }
+    .swatch {
+      width: 46px; height: 32px;
+      border-radius: 2px;
+      border: 1px solid var(--bg3);
+      background: var(--bg2);
+      overflow: hidden;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .swatch input[type="color"] {
+      width: 130%; height: 130%;
+      margin: -15%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+    }
+    .color-text {
+      flex: 1;
+      background: var(--bg2);
+      border: 1px solid var(--bg3);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 6px 10px;
+      outline: none;
+      transition: border-color .1s;
+    }
+    .color-text:focus { border-color: #52525B; }
+
+    select {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--bg3);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      padding: 7px 30px 7px 10px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2371717A'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    select:focus { border-color: #52525B; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--bg3); }
+    ::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
+
+    .hidden { display: none !important; }
+
+    /* ── MODAL ── */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.82);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal {
+      background: var(--bg2);
+      border: 1px solid var(--bg3);
+      border-radius: 2px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid var(--bg3);
+    }
+    .modal-title {
+      font-family: 'Manrope', sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -.01em;
+    }
+    .modal-x {
+      background: none;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 4px 6px;
+      border-radius: 2px;
+      transition: color .1s, background .1s;
+    }
+    .modal-x:hover { color: var(--text); background: var(--bg3); }
+    .modal-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+    .modal-foot {
+      padding: 14px 16px;
+      border-top: 1px solid var(--bg3);
+      display: flex;
+      gap: 10px;
+    }
+
+    .fmt-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 7px; }
+    .dur-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; }
+    .fmt-btn {
+      padding: 7px 4px;
+      border-radius: 2px;
+      border: 1px solid var(--bg3);
+      background: var(--bg2);
+      color: #D4D4D8;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'IBM Plex Sans', sans-serif;
+      cursor: pointer;
+      transition: all .1s;
+      text-align: center;
+      letter-spacing: .04em;
+    }
+    .fmt-btn:hover { background: var(--bg3); }
+    .fmt-btn.on { background: var(--accent); color: #000; border-color: var(--accent); }
+
+    .prog-track { height: 3px; background: var(--bg3); overflow: hidden; }
+    .prog-fill   { height: 100%; background: var(--accent); transition: width .2s; width: 0%; }
+
+    .info-box {
+      background: var(--bg);
+      border: 1px solid var(--bg3);
+      border-radius: 2px;
+      padding: 12px;
+      font-size: 12px;
+      color: var(--text3);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══════════════════ LEFT SIDEBAR ══════════════════ -->
+  <aside class="sidebar sidebar-left">
+    <div class="app-header">
+      <h1>ASCII Art Studio</h1>
+      <p>Transform images into animated ASCII</p>
+    </div>
+
+    <div class="section">
+      <div class="section-label">UPLOAD</div>
+      <div class="upload-zone" id="upload-zone">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="16 16 12 12 8 16"/>
+          <line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/>
+        </svg>
+        <div>
+          <p>Drop image or video</p>
+          <span>PNG, JPG, GIF, MP4</span>
+        </div>
+      </div>
+      <input type="file" id="file-input" accept="image/*,video/*" class="hidden">
+      <video id="src-video" class="hidden" loop muted playsinline crossorigin="anonymous"></video>
+      <canvas id="tmp-canvas" class="hidden"></canvas>
+      <button class="btn btn-y" id="browse-btn">Browse Files</button>
+    </div>
+
+    <div class="section" style="flex:1">
+      <div class="section-label">PRESETS</div>
+      <div id="presets-list"></div>
+    </div>
+
+    <div class="section">
+      <button class="btn btn-o" id="ba-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Show Original
+      </button>
+      <div class="btn-row">
+        <button class="btn btn-o" id="reset-btn">Reset</button>
+        <button class="btn btn-o" id="rand-btn">Randomize</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════════════ CANVAS CENTER ══════════════════ -->
+  <main class="canvas-area">
+    <div class="canvas-scroll" id="canvas-scroll">
+      <canvas id="ascii-canvas"></canvas>
+      <img id="orig-preview" alt="Original">
+    </div>
+    <div class="status-bar" id="status-bar">
+      <span id="s-dims">–</span>
+      <span class="sep">|</span>
+      <span id="s-chars">–</span>
+      <span class="sep">|</span>
+      <span id="s-fx">Static</span>
+      <span class="sep live hidden" id="s-live-sep">|</span>
+      <span class="live hidden" id="s-live">● LIVE</span>
+    </div>
+  </main>
+
+  <!-- ══════════════════ RIGHT SIDEBAR ══════════════════ -->
+  <aside class="sidebar sidebar-right">
+
+    <div class="section">
+      <div class="section-label">CHARACTER</div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">Density</span><span class="ctrl-val" id="v-density">80</span></div>
+        <input type="range" min="10" max="100" value="80" id="r-density">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">Contrast</span><span class="ctrl-val" id="v-contrast">50</span></div>
+        <input type="range" min="0" max="100" value="50" id="r-contrast">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">Brightness</span><span class="ctrl-val" id="v-brightness">50</span></div>
+        <input type="range" min="0" max="100" value="50" id="r-brightness">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">TYPOGRAPHY</div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">Font Size</span><span class="ctrl-val" id="v-fontSize">9</span></div>
+        <input type="range" min="4" max="24" value="9" id="r-fontSize">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">VISUAL WEIGHT</div>
+      <div class="toggle-row">
+        <span class="ctrl-lbl">Ultra Bold</span>
+        <button class="toggle on" id="t-ultraBold"><span class="toggle-knob"></span></button>
+      </div>
+      <div class="toggle-row">
+        <span class="ctrl-lbl">Drop Shadow</span>
+        <button class="toggle" id="t-textShadow"><span class="toggle-knob"></span></button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">COLOR</div>
+      <div class="ctrl">
+        <span class="ctrl-lbl">Color Mode</span>
+        <select id="r-colorMode">
+          <option value="monochrome">Monochrome</option>
+          <option value="grayscale">Grayscale</option>
+          <option value="color">Color</option>
+          <option value="duotone">Duotone</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <span class="ctrl-lbl">Text Color</span>
+        <div class="color-row">
+          <div class="swatch"><input type="color" id="c-text-pick" value="#00FF00"></div>
+          <input type="text" class="color-text" id="c-text" value="#00FF00" maxlength="7">
+        </div>
+      </div>
+      <div class="ctrl">
+        <span class="ctrl-lbl">Background</span>
+        <div class="color-row">
+          <div class="swatch"><input type="color" id="c-bg-pick" value="#000000"></div>
+          <input type="text" class="color-text" id="c-bg" value="#000000" maxlength="7">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">ANIMATION</div>
+      <div class="ctrl">
+        <span class="ctrl-lbl">Effect</span>
+        <select id="r-effect">
+          <option value="none">None</option>
+          <option value="matrix">Matrix</option>
+          <option value="glitch">Glitch</option>
+          <option value="flicker">Flicker</option>
+          <option value="wave">Wave</option>
+          <option value="scanline">Scanline</option>
+          <option value="pulse">Pulse</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">Speed</span><span class="ctrl-val" id="v-animSpeed">0</span></div>
+        <input type="range" min="0" max="100" value="0" id="r-animSpeed">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">Intensity</span><span class="ctrl-val" id="v-effectIntensity">0</span></div>
+        <input type="range" min="0" max="100" value="0" id="r-effectIntensity">
+      </div>
+    </div>
+
+    <div class="section" style="margin-top:auto">
+      <button class="btn btn-y" id="export-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export Artwork
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- ══════════════════ EXPORT MODAL ══════════════════ -->
+<div class="modal-bg hidden" id="export-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Export Artwork</span>
+      <button class="modal-x" id="modal-x">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ctrl">
+        <span class="ctrl-lbl">Format</span>
+        <div class="fmt-grid">
+          <button class="fmt-btn on" data-fmt="png">PNG</button>
+          <button class="fmt-btn"    data-fmt="webm">WebM</button>
+          <button class="fmt-btn"    data-fmt="svg">SVG</button>
+          <button class="fmt-btn"    data-fmt="txt">TXT</button>
+          <button class="fmt-btn"    data-fmt="json">JSON</button>
+        </div>
+      </div>
+      <div id="dur-section" class="ctrl hidden">
+        <span class="ctrl-lbl">Duration</span>
+        <div class="dur-grid">
+          <button class="fmt-btn on" data-dur="3">3s</button>
+          <button class="fmt-btn"    data-dur="5">5s</button>
+          <button class="fmt-btn"    data-dur="10">10s</button>
+          <button class="fmt-btn"    data-dur="15">15s</button>
+        </div>
+        <div class="info-box">Records canvas as WebM video. Works in Chrome/Edge. For MP4, convert using HandBrake or CloudConvert.</div>
+      </div>
+      <div id="exp-prog" class="ctrl hidden">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px;color:var(--text3)" id="prog-lbl">Exporting...</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px" id="prog-pct">0%</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-o" style="flex:1" id="modal-cancel">Cancel</button>
+      <button class="btn btn-y" style="flex:1" id="modal-go">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span id="modal-go-lbl">Export PNG</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const S = {
+  density:         80,
+  contrast:        50,
+  brightness:      50,
+  fontSize:        9,
+  ultraBold:       true,
+  textShadow:      false,
+  colorMode:       'monochrome',
+  textColor:       '#00FF00',
+  backgroundColor: '#000000',
+  currentEffect:   'none',
+  animationSpeed:  0,
+  effectIntensity: 0,
+};
+
+const PRESETS = [
+  { name:'Terminal',     desc:'Classic green on black',     cfg:{ textColor:'#00FF00', backgroundColor:'#000000', colorMode:'monochrome', currentEffect:'none',     ultraBold:true,  density:80,  contrast:50,  brightness:50, animationSpeed:0,  effectIntensity:0  } },
+  { name:'Matrix',       desc:'Falling green characters',   cfg:{ textColor:'#00FF41', backgroundColor:'#001100', colorMode:'monochrome', currentEffect:'matrix',   ultraBold:true,  density:70,  contrast:70,  brightness:40, animationSpeed:60, effectIntensity:70 } },
+  { name:'Newspaper',    desc:'Black and white, high contrast', cfg:{ textColor:'#111111', backgroundColor:'#F5F0E8', colorMode:'grayscale', currentEffect:'none', ultraBold:false, density:90,  contrast:80,  brightness:55, animationSpeed:0,  effectIntensity:0  } },
+  { name:'Brutalist',    desc:'Stark black and white',      cfg:{ textColor:'#FFFFFF', backgroundColor:'#000000', colorMode:'monochrome', currentEffect:'none',     ultraBold:true,  density:60,  contrast:100, brightness:50, animationSpeed:0,  effectIntensity:0  } },
+  { name:'Cyberpunk',    desc:'Neon colors with glitch',    cfg:{ textColor:'#FF00FF', backgroundColor:'#080010', colorMode:'duotone',    currentEffect:'glitch',   ultraBold:true,  density:75,  contrast:70,  brightness:55, animationSpeed:40, effectIntensity:60 } },
+  { name:'Minimal White',desc:'Light theme, sparse',        cfg:{ textColor:'#27272A', backgroundColor:'#FAFAFA', colorMode:'monochrome', currentEffect:'none',     ultraBold:false, density:40,  contrast:40,  brightness:60, animationSpeed:0,  effectIntensity:0  } },
+];
+
+// ═══════════════════════════════════════════════════
+// ASCII CONVERSION
+// ═══════════════════════════════════════════════════
+// 12-level scale: dense→sparse. Fewer levels = solid block areas for highlights (matches Emergent's style)
+const CHARS = '@#MW%8*+=;:,. ';
+const CHAR_ASPECT = 0.55; // JetBrains Mono width/height ratio (matches React source)
+
+function getChar(brightness) {
+  const n = CHARS.length; // density controls cols, not char set
+  const t = 1 - brightness / 255; // dark→space(index last), light→dense(index 0)
+  return CHARS[Math.min(n - 1, Math.floor(t * n))];
+}
+
+function hexToRgb(hex) {
+  hex = hex.replace('#','');
+  if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  return { r:parseInt(hex.slice(0,2),16), g:parseInt(hex.slice(2,4),16), b:parseInt(hex.slice(4,6),16) };
+}
+
+function lerpColor(c1, c2, t) {
+  const a = hexToRgb(c1), b = hexToRgb(c2);
+  return `rgb(${Math.round(a.r+(b.r-a.r)*t)},${Math.round(a.g+(b.g-a.g)*t)},${Math.round(a.b+(b.b-a.b)*t)})`;
+}
+
+function isValidHex(s) { return /^#[0-9a-fA-F]{6}$/.test(s); }
+
+function processImageData(imgData, cols, rows) {
+  const chars = [], lines = [];
+  for (let r = 0; r < rows; r++) {
+    const row = []; let line = '';
+    for (let c = 0; c < cols; c++) {
+      const i = (r * cols + c) * 4;
+      const pr = imgData.data[i], pg = imgData.data[i+1], pb = imgData.data[i+2];
+      const bright = 0.299*pr + 0.587*pg + 0.114*pb;
+      const ch = getChar(bright);
+      let color;
+      switch (S.colorMode) {
+        case 'monochrome': color = S.textColor; break;
+        case 'grayscale':  { const v=Math.floor(bright).toString(16).padStart(2,'0'); color=`#${v}${v}${v}`; break; }
+        case 'color':      color = `rgb(${pr},${pg},${pb})`; break;
+        case 'duotone':    color = lerpColor(S.backgroundColor, S.textColor, bright/255); break;
+        default:           color = S.textColor;
+      }
+      row.push({ ch, color, bright }); line += ch;
+    }
+    chars.push(row); lines.push(line);
+  }
+  return { chars, cols, rows, text: lines.join('\n') };
+}
+
+function sampleImage(source, cols, rows) {
+  const tc = document.getElementById('tmp-canvas');
+  const cx = tc.getContext('2d', { willReadFrequently:true });
+  tc.width = cols; tc.height = rows;
+  const cv = 1 + (S.contrast - 50) / 50;  // 0→0%  50→100%(neutral)  100→200%
+  const bv = S.brightness / 50;           // 0→0%  50→100%(neutral)  100→200%
+  cx.filter = `contrast(${cv*100}%) brightness(${bv*100}%)`;
+  cx.drawImage(source, 0, 0, cols, rows);
+  return cx.getImageData(0, 0, cols, rows);
+}
+
+function convertImage(img) {
+  const cols = Math.floor(S.density * 1.8);
+  const rows = Math.floor(cols * (img.naturalHeight / img.naturalWidth) * CHAR_ASPECT);
+  return processImageData(sampleImage(img, cols, rows), cols, rows);
+}
+
+function convertVideoFrame(vid) {
+  const cols = Math.floor(Math.min(S.density, 60) * 1.5);
+  const rows = Math.floor(cols * (vid.videoHeight / vid.videoWidth) * CHAR_ASPECT);
+  return processImageData(sampleImage(vid, cols, rows), cols, rows);
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER ENGINE
+// ═══════════════════════════════════════════════════
+const canvas = document.getElementById('ascii-canvas');
+const ctx    = canvas.getContext('2d');
+
+let asciiData = null;
+let srcImg    = null;
+let isVideo   = false;
+let rafId     = null;
+let t0        = Date.now();
+let lastVidFt = 0;
+
+// Matrix state
+let matCols = [];
+
+function charW() { return S.fontSize * CHAR_ASPECT; }
+function charH() { return S.fontSize; }
+
+function initMatrix(cols) {
+  matCols = Array.from({ length:cols }, () => ({
+    head:   Math.random() * -30,
+    speed:  0.4 + Math.random() * 0.8,
+    len:    6  + Math.floor(Math.random() * 18),
+  }));
+}
+
+function renderFrame(ts) {
+  if (!asciiData) return;
+  const elapsed = (Date.now() - t0) / 1000;
+  const speed = S.animationSpeed / 100;
+  const inten = S.effectIntensity / 100;
+  const cw = charW(), ch = charH();
+  const { chars, cols, rows } = asciiData;
+
+  const W = Math.ceil(cols * cw), H = Math.ceil(rows * ch);
+  if (canvas.width !== W || canvas.height !== H) {
+    canvas.width = W; canvas.height = H;
+    updateStatus(W, H, cols, rows);
+  }
+
+  ctx.fillStyle = S.backgroundColor;
+  ctx.fillRect(0, 0, W, H);
+
+  const fw = S.ultraBold ? 900 : 700;
+  ctx.font = `${fw} ${S.fontSize}px 'JetBrains Mono', monospace`;
+  ctx.textBaseline = 'top';
+
+  if (S.textShadow) {
+    ctx.shadowColor = 'rgba(0,0,0,.8)';
+    ctx.shadowBlur = 3; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+  } else {
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  }
+
+  // Matrix column heads update
+  if (S.currentEffect === 'matrix') {
+    if (matCols.length !== cols) initMatrix(cols);
+    for (const mc of matCols) {
+      mc.head += mc.speed * speed * 1.6;
+      if (mc.head - mc.len > rows) {
+        mc.head = -5; mc.speed = 0.4 + Math.random() * 0.8; mc.len = 6 + Math.floor(Math.random() * 18);
+      }
+    }
+  }
+
+  // Scanline Y
+  const scanY = S.currentEffect === 'scanline'
+    ? ((elapsed * speed * 180) % (H + 40)) - 20
+    : -9999;
+
+  // Pulse alpha
+  const pulseAlpha = S.currentEffect === 'pulse'
+    ? 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(elapsed * speed * Math.PI * 2))
+    : 1;
+
+  // Per-row glitch offsets
+  const glitchOffsets = [];
+  if (S.currentEffect === 'glitch') {
+    for (let r = 0; r < rows; r++) {
+      glitchOffsets[r] = Math.random() < inten * 0.12
+        ? (Math.random() - 0.5) * inten * 40
+        : 0;
+    }
+  }
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = chars[r][c];
+      let x = c * cw, y = r * ch;
+      let alpha = pulseAlpha;
+      let glyph = cell.ch;
+      let color = cell.color;
+
+      switch (S.currentEffect) {
+        case 'wave': {
+          const amp = inten * 14;
+          y += Math.sin(c / cols * Math.PI * 6 + elapsed * speed * 5) * amp;
+          break;
+        }
+        case 'glitch': {
+          x += glitchOffsets[r] || 0;
+          if (Math.random() < inten * 0.004)
+            color = `hsl(${Math.floor(Math.random()*360)},100%,70%)`;
+          break;
+        }
+        case 'flicker': {
+          if (Math.random() < inten * 0.35) alpha = 0.05 + Math.random() * 0.35;
+          break;
+        }
+        case 'matrix': {
+          const mc = matCols[c];
+          const d  = mc.head - r;
+          if (d < 0 || d > mc.len) {
+            alpha = 0.1 + inten * 0.12;
+          } else if (d < 1) {
+            color = '#CCFFCC'; alpha = 1;
+            glyph = CHARS[Math.floor(Math.random() * 20)];
+          } else {
+            const ft = 1 - d / mc.len;
+            alpha = ft * (0.4 + inten * 0.6);
+            color = `rgb(0,${Math.floor(150 + ft * 105)},40)`;
+            if (Math.random() < 0.04) glyph = CHARS[Math.floor(Math.random()*20)];
+          }
+          break;
+        }
+        case 'scanline': {
+          const dist = Math.abs(y - scanY);
+          if (dist < 3) { alpha = 1; color = '#FFFFFF'; }
+          else if (dist < 10) { alpha = 0.65; }
+          break;
+        }
+      }
+
+      if (alpha <= 0.01) continue;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.fillText(glyph, x, y);
+    }
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.shadowColor = 'transparent';
+}
+
+function startLoop() {
+  if (rafId) cancelAnimationFrame(rafId);
+  t0 = Date.now(); lastVidFt = 0;
+  const vid = document.getElementById('src-video');
+
+  function loop(ts) {
+    if (isVideo && vid.readyState >= 2 && ts - lastVidFt > 1000/30) {
+      lastVidFt = ts;
+      asciiData = convertVideoFrame(vid);
+    }
+    renderFrame(ts);
+    rafId = requestAnimationFrame(loop);
+  }
+  rafId = requestAnimationFrame(loop);
+}
+
+function stopLoop() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+
+function render() {
+  stopLoop();
+  if (isVideo || S.currentEffect !== 'none') startLoop();
+  else requestAnimationFrame(ts => renderFrame(ts));
+}
+
+// ═══════════════════════════════════════════════════
+// STATUS BAR
+// ═══════════════════════════════════════════════════
+function updateStatus(W, H, cols, rows) {
+  const bar = document.getElementById('status-bar');
+  bar.style.display = 'flex';
+  document.getElementById('s-dims').textContent  = `${W} × ${H}px`;
+  document.getElementById('s-chars').textContent = `${cols} × ${rows} chars`;
+  document.getElementById('s-fx').textContent    = S.currentEffect === 'none' ? 'Static'
+    : S.currentEffect[0].toUpperCase() + S.currentEffect.slice(1);
+  const liveEl = document.getElementById('s-live');
+  const liveSep = document.getElementById('s-live-sep');
+  liveEl.classList.toggle('hidden', !isVideo);
+  liveSep.classList.toggle('hidden', !isVideo);
+}
+
+// ═══════════════════════════════════════════════════
+// FILE LOADING
+// ═══════════════════════════════════════════════════
+function loadFile(file) {
+  const url = URL.createObjectURL(file);
+  isVideo = file.type.startsWith('video/');
+
+  if (isVideo) {
+    const vid = document.getElementById('src-video');
+    vid.src = url;
+    vid.onloadeddata = () => { startLoop(); };
+    vid.play().catch(() => {});
+  } else {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      srcImg = img;
+      document.getElementById('orig-preview').src = url;
+      asciiData = convertImage(img);
+      matCols = [];
+      render();
+    };
+    img.src = url;
+  }
+}
+
+function loadDefault() {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    srcImg = img;
+    asciiData = convertImage(img);
+    render();
+  };
+  img.onerror = () => {}; // silent fail if offline
+  img.src = 'https://images.pexels.com/photos/8107857/pexels-photo-8107857.jpeg?auto=compress&cs=tinysrgb&w=800';
+}
+
+// ═══════════════════════════════════════════════════
+// REPROCESS
+// ═══════════════════════════════════════════════════
+function reprocess() {
+  matCols = [];
+  if (isVideo) { render(); return; }
+  if (srcImg) {
+    asciiData = convertImage(srcImg);
+    const cw = charW(), ch = charH();
+    canvas.width  = Math.ceil(asciiData.cols * cw);
+    canvas.height = Math.ceil(asciiData.rows * ch);
+    updateStatus(canvas.width, canvas.height, asciiData.cols, asciiData.rows);
+    render();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// PRESETS
+// ═══════════════════════════════════════════════════
+function buildPresets() {
+  const list = document.getElementById('presets-list');
+  PRESETS.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'preset';
+    btn.dataset.name = p.name;
+    btn.innerHTML = `<div><span class="preset-name">${p.name}</span><span class="preset-desc">${p.desc}</span></div><span class="check">✓</span>`;
+    btn.addEventListener('click', () => applyPreset(p.name));
+    list.appendChild(btn);
+  });
+}
+
+function applyPreset(name) {
+  const p = PRESETS.find(x => x.name === name);
+  if (!p) return;
+  Object.assign(S, p.cfg);
+  syncUI();
+  highlightPreset(name);
+  reprocess();
+}
+
+function highlightPreset(name) {
+  document.querySelectorAll('.preset').forEach(b => {
+    b.classList.toggle('on', b.dataset.name === name);
+  });
+}
+
+function clearPreset() {
+  document.querySelectorAll('.preset').forEach(b => b.classList.remove('on'));
+}
+
+// ═══════════════════════════════════════════════════
+// SYNC UI ↔ STATE
+// ═══════════════════════════════════════════════════
+function syncUI() {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+  const txt = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  set('r-density',       S.density);        txt('v-density',       S.density);
+  set('r-contrast',      S.contrast);       txt('v-contrast',      S.contrast);
+  set('r-brightness',    S.brightness);     txt('v-brightness',    S.brightness);
+  set('r-fontSize',      S.fontSize);       txt('v-fontSize',      S.fontSize);
+  set('r-animSpeed',     S.animationSpeed); txt('v-animSpeed',     S.animationSpeed);
+  set('r-effectIntensity',S.effectIntensity);txt('v-effectIntensity',S.effectIntensity);
+  set('r-colorMode',     S.colorMode);
+  set('r-effect',        S.currentEffect);
+
+  document.getElementById('t-ultraBold').classList.toggle('on',  S.ultraBold);
+  document.getElementById('t-textShadow').classList.toggle('on', S.textShadow);
+
+  set('c-text-pick', S.textColor);     set('c-text', S.textColor);
+  set('c-bg-pick',   S.backgroundColor); set('c-bg', S.backgroundColor);
+}
+
+// ═══════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════
+function initControls() {
+  // Sliders that require ASCII reprocessing
+  ['density','contrast','brightness'].forEach(k => {
+    document.getElementById(`r-${k}`).addEventListener('input', e => {
+      S[k] = +e.target.value;
+      document.getElementById(`v-${k}`).textContent = S[k];
+      clearPreset();
+      reprocess();
+    });
+  });
+
+  // Sliders that only need re-render (no reprocessing)
+  const renderOnly = [
+    ['r-fontSize',       'v-fontSize',        'fontSize',        true ],
+    ['r-animSpeed',      'v-animSpeed',       'animationSpeed',  false],
+    ['r-effectIntensity','v-effectIntensity', 'effectIntensity', false],
+  ];
+  renderOnly.forEach(([rid, vid, key, needsResize]) => {
+    document.getElementById(rid).addEventListener('input', e => {
+      S[key] = +e.target.value;
+      if (vid) document.getElementById(vid).textContent = S[key];
+      clearPreset();
+      if (needsResize && asciiData) {
+        const cw = charW(), ch = charH();
+        canvas.width  = Math.ceil(asciiData.cols * cw);
+        canvas.height = Math.ceil(asciiData.rows * ch);
+        updateStatus(canvas.width, canvas.height, asciiData.cols, asciiData.rows);
+      }
+      render();
+    });
+  });
+
+  // Toggles
+  ['ultraBold','textShadow'].forEach(k => {
+    document.getElementById(`t-${k}`).addEventListener('click', function() {
+      S[k] = !S[k];
+      this.classList.toggle('on', S[k]);
+      clearPreset();
+      render();
+    });
+  });
+
+  // Color mode
+  document.getElementById('r-colorMode').addEventListener('change', e => {
+    S.colorMode = e.target.value;
+    clearPreset();
+    reprocess();
+  });
+
+  // Effect
+  document.getElementById('r-effect').addEventListener('change', e => {
+    S.currentEffect = e.target.value;
+    matCols = [];
+    clearPreset();
+    render();
+  });
+
+  // Color pickers
+  function colorPair(pickId, textId, key, needsReprocess) {
+    document.getElementById(pickId).addEventListener('input', e => {
+      S[key] = e.target.value;
+      document.getElementById(textId).value = e.target.value;
+      clearPreset();
+      needsReprocess ? reprocess() : render();
+    });
+    document.getElementById(textId).addEventListener('input', e => {
+      if (!isValidHex(e.target.value)) return;
+      S[key] = e.target.value;
+      document.getElementById(pickId).value = e.target.value;
+      clearPreset();
+      needsReprocess ? reprocess() : render();
+    });
+  }
+  colorPair('c-text-pick','c-text','textColor',      true);
+  colorPair('c-bg-pick',  'c-bg',  'backgroundColor', false);
+
+  // Before / after
+  const baBtn = document.getElementById('ba-btn');
+  let showOrig = false;
+  baBtn.addEventListener('click', () => {
+    showOrig = !showOrig;
+    baBtn.textContent = showOrig ? 'Show ASCII' : 'Show Original';
+    baBtn.classList.toggle('on', showOrig);
+    canvas.style.display = showOrig ? 'none' : 'block';
+    const orig = document.getElementById('orig-preview');
+    orig.style.display = showOrig ? 'block' : 'none';
+  });
+
+  // Reset (back to Terminal defaults)
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    Object.assign(S, PRESETS[0].cfg);
+    clearPreset();
+    syncUI();
+    reprocess();
+  });
+
+  // Randomize
+  document.getElementById('rand-btn').addEventListener('click', () => {
+    const rh = () => '#' + Math.floor(Math.random()*0xFFFFFF).toString(16).padStart(6,'0');
+    S.density        = 10  + Math.floor(Math.random()*90);
+    S.contrast       = Math.floor(Math.random()*100);
+    S.brightness     = Math.floor(Math.random()*100);
+    S.fontSize       = 4   + Math.floor(Math.random()*20);
+    S.animationSpeed = Math.floor(Math.random()*100);
+    S.effectIntensity= Math.floor(Math.random()*100);
+    S.ultraBold      = Math.random() > .5;
+    S.textShadow     = Math.random() > .75;
+    S.colorMode      = ['monochrome','grayscale','color','duotone'][Math.floor(Math.random()*4)];
+    S.textColor      = rh();
+    S.backgroundColor= Math.random() > .4 ? '#000000' : rh();
+    S.currentEffect  = ['none','matrix','glitch','flicker','wave','scanline','pulse'][Math.floor(Math.random()*7)];
+    clearPreset(); syncUI(); reprocess();
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// UPLOAD
+// ═══════════════════════════════════════════════════
+function initUpload() {
+  const zone  = document.getElementById('upload-zone');
+  const inp   = document.getElementById('file-input');
+  const bBtn  = document.getElementById('browse-btn');
+
+  const go = f => { if (f && (f.type.startsWith('image/') || f.type.startsWith('video/'))) loadFile(f); };
+  bBtn.addEventListener('click', () => inp.click());
+  zone.addEventListener('click', () => inp.click());
+  inp.addEventListener('change', e => go(e.target.files[0]));
+
+  zone.addEventListener('dragenter', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    go(e.dataTransfer.files[0]);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════
+let exportFmt = 'png';
+let exportDur = 3;
+let exporting = false;
+
+function initExport() {
+  document.getElementById('export-btn').addEventListener('click',  () => openModal());
+  document.getElementById('modal-x').addEventListener('click',     () => closeModal());
+  document.getElementById('modal-cancel').addEventListener('click',() => closeModal());
+  document.getElementById('modal-go').addEventListener('click',    () => doExport());
+
+  document.querySelectorAll('.fmt-btn[data-fmt]').forEach(b => {
+    b.addEventListener('click', () => {
+      exportFmt = b.dataset.fmt;
+      document.querySelectorAll('.fmt-btn[data-fmt]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      document.getElementById('modal-go-lbl').textContent = `Export ${exportFmt.toUpperCase()}`;
+      document.getElementById('dur-section').classList.toggle('hidden', exportFmt !== 'webm');
+    });
+  });
+
+  document.querySelectorAll('.fmt-btn[data-dur]').forEach(b => {
+    b.addEventListener('click', () => {
+      exportDur = +b.dataset.dur;
+      document.querySelectorAll('.fmt-btn[data-dur]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+    });
+  });
+}
+
+function openModal() {
+  document.getElementById('export-modal').classList.remove('hidden');
+  document.getElementById('exp-prog').classList.add('hidden');
+}
+
+function closeModal() {
+  if (exporting) return;
+  document.getElementById('export-modal').classList.add('hidden');
+}
+
+function setProgress(pct, label) {
+  document.getElementById('exp-prog').classList.remove('hidden');
+  document.getElementById('prog-pct').textContent = `${pct}%`;
+  document.getElementById('prog-fill').style.width = `${pct}%`;
+  if (label) document.getElementById('prog-lbl').textContent = label;
+}
+
+async function doExport() {
+  if (exporting || !asciiData) return;
+  exporting = true;
+  try {
+    if      (exportFmt === 'png')  await expPNG();
+    else if (exportFmt === 'svg')  await expSVG();
+    else if (exportFmt === 'txt')  await expTXT();
+    else if (exportFmt === 'webm') await expWebM();
+    else if (exportFmt === 'json') await expJSON();
+  } catch (e) {
+    console.error('Export error:', e);
+    alert('Export failed — see console.');
+  }
+  exporting = false;
+  document.getElementById('exp-prog').classList.add('hidden');
+  closeModal();
+}
+
+function dlBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+function expPNG() {
+  setProgress(60, 'Capturing...');
+  return new Promise(resolve => {
+    canvas.toBlob(blob => { dlBlob(blob, `ascii-${Date.now()}.png`); setProgress(100); resolve(); });
+  });
+}
+
+async function expSVG() {
+  setProgress(20, 'Building SVG...');
+  const { chars, cols, rows } = asciiData;
+  const cw = charW(), ch = charH();
+  const W = Math.ceil(cols*cw), H = Math.ceil(rows*ch);
+  const fw = S.ultraBold ? 900 : 700;
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<rect width="${W}" height="${H}" fill="${S.backgroundColor}"/>`;
+  svg += `<g font-family="'JetBrains Mono','Courier New',monospace" font-size="${S.fontSize}" font-weight="${fw}">`;
+  setProgress(50, 'Writing chars...');
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const { ch: glyph, color } = chars[r][c];
+      if (glyph === ' ') continue;
+      const x = (c * cw).toFixed(1), y = (r * ch + S.fontSize).toFixed(1);
+      svg += `<text x="${x}" y="${y}" fill="${color}">${esc(glyph)}</text>`;
+    }
+  }
+  svg += `</g></svg>`;
+  setProgress(90, 'Saving...');
+  dlBlob(new Blob([svg],{type:'image/svg+xml'}), `ascii-${Date.now()}.svg`);
+  setProgress(100);
+}
+
+async function expTXT() {
+  setProgress(80, 'Writing...');
+  dlBlob(new Blob([asciiData.text],{type:'text/plain'}), `ascii-${Date.now()}.txt`);
+  setProgress(100);
+}
+
+async function expJSON() {
+  setProgress(60, 'Serializing...');
+  const { cols, rows, text } = asciiData;
+  const payload = { cols, rows, text, settings: { ...S } };
+  dlBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}), `ascii-${Date.now()}.json`);
+  setProgress(100);
+}
+
+async function expWebM() {
+  if (!window.MediaRecorder) { alert('MediaRecorder not supported in this browser.'); return; }
+  setProgress(5, 'Recording...');
+  const stream = canvas.captureStream(30);
+  const mime   = MediaRecorder.isTypeSupported('video/webm; codecs=vp9')
+    ? 'video/webm; codecs=vp9' : 'video/webm';
+  const rec    = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5000000 });
+  const chunks = [];
+  rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  const done = new Promise(r => { rec.onstop = () => r(new Blob(chunks, { type: mime })); });
+
+  // Ensure loop is running during recording
+  const wasLooping = !!rafId;
+  if (!wasLooping) startLoop();
+
+  rec.start();
+  const start = Date.now();
+  const dur   = exportDur * 1000;
+  await new Promise(r => {
+    const tick = setInterval(() => {
+      const pct = Math.floor(((Date.now()-start)/dur)*85);
+      setProgress(5+pct, 'Recording...');
+      if (Date.now()-start >= dur) { clearInterval(tick); r(); }
+    }, 250);
+  });
+  rec.stop();
+  if (!wasLooping) stopLoop();
+  setProgress(92, 'Saving...');
+  const blob = await done;
+  dlBlob(blob, `ascii-${Date.now()}.webm`);
+  setProgress(100);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+buildPresets();
+initControls();
+initUpload();
+initExport();
+syncUI();
+
+// Ensure fonts are loaded before default image (accurate char metrics)
+document.fonts.ready.then(() => loadDefault());
+</script>
+</body>
+</html>
