@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="b" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" width="335.686" height="335.686" viewBox="0 0 335.686 335.686">
+  <g id="c" data-name="Layer 1">
+    <g>
+      <rect width="335.686" height="335.686" fill="#fff"/>
+      <g>
+        <path d="M54.628,278.208h78.844v-79.863h-1.684c-42.614,0-77.16,34.546-77.16,77.16v2.703Z"/>
+        <rect x="133.473" y="146.614" width="144.5" height="51.346"/>
+        <path d="M54.628,69.454h0c0,42.614,34.546,77.16,77.16,77.16h1.684v-26.094h147.586v-51.066H54.628Z"/>
+      </g>
+    </g>
+  </g>
+</svg>
