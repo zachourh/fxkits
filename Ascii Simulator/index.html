@@ -740,7 +740,6 @@ function renderFrame(ts) {
   if (canvas.width !== W || canvas.height !== H) {
     canvas.width = W; canvas.height = H;
     updateStatus(W, H, cols, rows);
-    applyCanvasTransform();
   }
 
   ctx.fillStyle = S.backgroundColor;
@@ -845,6 +844,7 @@ function renderFrame(ts) {
 
   ctx.globalAlpha = 1;
   ctx.shadowColor = 'transparent';
+  applyCanvasTransform();
 }
 
 function startLoop() {
@@ -1311,6 +1311,7 @@ window.addEventListener('resize', applyCanvasTransform);
 
 // Ensure fonts are loaded before default image (accurate char metrics)
 document.fonts.ready.then(() => loadDefault());
+window.addEventListener('resize', applyCanvasTransform);
 </script>
 </body>
 </html>
