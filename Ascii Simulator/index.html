@@ -721,6 +721,18 @@ let isVideo   = false;
 let rafId     = null;
 let t0        = Date.now();
 let lastVidFt = 0;
+let userZoom  = 1;
+
+function applyCanvasTransform() {
+  const scroll = document.getElementById('canvas-scroll');
+  const availW = scroll.clientWidth  - 64;
+  const availH = scroll.clientHeight - 64;
+  const scaleW = availW / (canvas.width  || 1);
+  const scaleH = availH / (canvas.height || 1);
+  const fit    = Math.min(scaleW, scaleH);
+  canvas.style.transform       = `scale(${Math.max(0.05, fit * userZoom)})`;
+  canvas.style.transformOrigin = 'center center';
+}
 
 // Matrix state
 let matCols = [];
@@ -748,6 +760,7 @@ function renderFrame(ts) {
   if (canvas.width !== W || canvas.height !== H) {
     canvas.width = W; canvas.height = H;
     updateStatus(W, H, cols, rows);
+    applyCanvasTransform();
   }
 
   ctx.fillStyle = S.backgroundColor;
@@ -1315,6 +1328,16 @@ initControls();
 initUpload();
 initExport();
 syncUI();
+
+// Scroll wheel zoom
+document.getElementById('canvas-scroll').addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  userZoom = Math.max(0.1, Math.min(10, userZoom * factor));
+  applyCanvasTransform();
+}, { passive: false });
+
+window.addEventListener('resize', applyCanvasTransform);
 
 // Ensure fonts are loaded before default image (accurate char metrics)
 document.fonts.ready.then(() => loadDefault());
