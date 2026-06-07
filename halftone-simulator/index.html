@@ -287,6 +287,47 @@ input[type="range"]::-moz-range-thumb {
 }
 
 #main-svg { display: block; }
+
+/* ── MOBILE ── */
+
+@media (max-width: 640px) {
+  body {
+    height: auto;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .preview {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 56vw;
+    min-height: 240px;
+    padding: 20px;
+    flex-shrink: 0;
+    order: 1;
+  }
+
+  .panel {
+    position: relative;
+    top: auto;
+    right: auto;
+    transform: none;
+    width: 100%;
+    max-height: none;
+    border-radius: 0;
+    background: var(--bg);
+    border: none;
+    border-top: 1px solid var(--border);
+    order: 2;
+  }
+
+  .panel-body {
+    overflow-y: visible;
+    max-height: none;
+  }
+}
 </style>
 </head>
 <body>
