@@ -323,13 +323,13 @@ input[type="range"]::-moz-range-thumb {
     <div class="sec">Grid</div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Density</label><span class="v" id="v-density">22</span></div>
-      <input type="range" id="c-density" min="4" max="60" value="22">
+      <div class="ctrl-head"><label>Density</label><span class="v" id="v-density">30</span></div>
+      <input type="range" id="c-density" min="4" max="80" value="30">
     </div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Square Size</label><span class="v" id="v-size">92%</span></div>
-      <input type="range" id="c-size" min="10" max="100" value="92">
+      <div class="ctrl-head"><label>Square Size</label><span class="v" id="v-size">65%</span></div>
+      <input type="range" id="c-size" min="10" max="100" value="65">
     </div>
 
     <div class="hr"></div>
@@ -349,8 +349,8 @@ input[type="range"]::-moz-range-thumb {
     </div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Strength</label><span class="v" id="v-gradStr">60%</span></div>
-      <input type="range" id="c-gradStr" min="0" max="100" value="60">
+      <div class="ctrl-head"><label>Strength</label><span class="v" id="v-gradStr">70%</span></div>
+      <input type="range" id="c-gradStr" min="0" max="100" value="70">
     </div>
 
     <div class="hr"></div>
@@ -563,12 +563,13 @@ function render() {
     const nx = Math.max(0, Math.min(1, cx / W));
     const ny = Math.max(0, Math.min(1, cy / H));
 
-    // Strength controls darkness contrast — direction=None: uniform→progressive dots
-    // direction set: adds positional size gradient on top
-    const darkMod = (1 - gradStr) + gradStr * cov;
-    const gm      = gradientMod(nx, ny, gradDir, gradStr);
+    // Power curve: strength=0 → linear (cov), strength=1 → cubic (cov³)
+    // Edge pixels (cov≈0.1) become nearly invisible; center stays large
+    const power    = 1 + gradStr * 2;
+    const darkMod  = Math.pow(cov, power);
+    const gm       = gradientMod(nx, ny, gradDir, gradStr);
 
-    const halfSize = Math.max(0.5, maxR * darkMod * gm);
+    const halfSize = Math.max(0.25, maxR * darkMod * gm);
 
     const el = document.createElementNS(ns, 'rect');
     el.setAttribute('x',      (cx - halfSize).toFixed(2));
