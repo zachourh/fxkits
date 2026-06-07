@@ -7,401 +7,189 @@
 <title>Heatmap Simulator</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; font-family: system-ui, sans-serif; color: #fff; }
+  #app { width: 100vw; height: 100vh; }
+  canvas { display: block; }
 
-:root {
-  --bg: #09090B;
-  --bg2: #18181B;
-  --bg3: #27272A;
-  --border: rgba(39,39,42,0.6);
-  --text: #F4F4F5;
-  --text2: #A1A1AA;
-  --text3: #71717A;
-  --text4: #52525B;
-  --accent: #22D3EE;
-}
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  font-size: 13px;
-  height: 100vh;
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
-}
-
-.panel {
-  position: fixed;
-  right: 22px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 230px;
-  max-height: 90vh;
-  background: rgba(9,9,11,0.84);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 14px;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.panel-header {
-  padding: 16px 16px 14px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.panel-header h1 {
-  font-family: 'Manrope', sans-serif;
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-
-.panel-header p {
-  font-size: 11px;
-  color: var(--text3);
-  margin-top: 3px;
-}
-
-.panel-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.panel-body::-webkit-scrollbar { width: 4px; }
-.panel-body::-webkit-scrollbar-track { background: transparent; }
-.panel-body::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
-
-.panel-footer {
-  padding: 12px 14px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.upload-box {
-  border: 2px dashed var(--bg3);
-  border-radius: 2px;
-  padding: 16px 10px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.upload-box:hover,
-.upload-box.over {
-  border-color: var(--accent);
-  background: rgba(34,211,238,0.05);
-}
-
-.upload-box p { font-size: 12px; color: var(--text2); }
-.upload-box em {
-  font-size: 11px;
-  color: var(--text3);
-  font-style: normal;
-  display: block;
-  margin-top: 3px;
-  word-break: break-all;
-}
-
-.sec {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text4);
-  margin-bottom: -6px;
-}
-
-.hr { height: 1px; background: var(--border); }
-.ctrl { display: flex; flex-direction: column; gap: 7px; }
-.ctrl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.ctrl-head label { font-size: 13px; color: var(--text2); font-weight: 500; }
-.ctrl-head .v { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); white-space: nowrap; }
-
-.sel {
-  width: 100%;
-  background: var(--bg2);
-  border: 1px solid var(--bg3);
-  border-radius: 2px;
-  color: var(--text);
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 13px;
-  padding: 7px 30px 7px 10px;
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2371717A'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-}
-
-.swatches {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-  height: 18px;
-}
-
-.swatch {
-  border-radius: 2px;
-  border: 1px solid rgba(255,255,255,0.12);
-}
-
-input[type="range"] {
-  width: 100%;
-  height: 4px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: var(--bg3);
-  border-radius: 0;
-  outline: none;
-  cursor: pointer;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 16px;
-  border-radius: 2px;
-  background: #D4D4D8;
-  cursor: pointer;
-}
-
-input[type="range"]::-moz-range-thumb {
-  width: 12px;
-  height: 16px;
-  border-radius: 2px;
-  background: #D4D4D8;
-  border: none;
-  cursor: pointer;
-}
-
-.toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--text2);
-  font-size: 13px;
-}
-
-.toggle-row input {
-  width: 34px;
-  height: 18px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.btn-export {
-  width: 100%;
-  padding: 10px;
-  background: var(--accent);
-  color: #001014;
-  border: none;
-  border-radius: 2px;
-  font-size: 13px;
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.btn-export:hover { background: #67E8F9; }
-
-.preview {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 36px 292px 36px 36px;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(255,255,255,0.035) 1px, transparent 1px),
-    #121216;
-  background-size: 44px 44px;
-  overflow: hidden;
-}
-
-.stage {
-  position: relative;
-  line-height: 0;
-  box-shadow: 0 26px 80px rgba(0,0,0,0.42);
-  background: #050507;
-  overflow: hidden;
-  cursor: grab;
-  touch-action: none;
-  transform-origin: 0 0;
-  will-change: transform;
-}
-
-.stage.dragging { cursor: grabbing; }
-
-#result-canvas {
-  display: block;
-  max-width: min(100%, 1180px);
-  max-height: calc(100vh - 72px);
-  width: auto;
-  height: auto;
-}
-
-.hud {
-  position: absolute;
-  left: 16px;
-  top: 16px;
-  display: grid;
-  gap: 8px;
-  color: rgba(255,255,255,0.86);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  line-height: 1;
-  pointer-events: none;
-}
-
-.hud span {
-  width: max-content;
-  background: rgba(0,0,0,0.62);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 6px 7px;
-}
-
-.legend {
-  position: absolute;
-  left: 16px;
-  bottom: 16px;
-  width: 180px;
-  height: 10px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: linear-gradient(90deg, #14005a, #0037ff, #00d6ff, #72ff55, #fff000, #ff5a00, #d10000, #fff);
-}
-
-@media (max-width: 760px) {
-  body { overflow: auto; min-height: 100vh; }
-  .preview {
-    position: relative;
-    min-height: 58vh;
-    padding: 18px;
+  #viewport {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; background: #000;
   }
-  .panel {
-    position: relative;
-    right: auto;
-    top: auto;
-    transform: none;
-    width: calc(100% - 28px);
-    max-height: none;
-    margin: 14px;
+  #stage {
+    position: relative; cursor: grab; touch-action: none;
+    transform-origin: 0 0; will-change: transform; line-height: 0;
   }
-  #result-canvas { max-height: 54vh; }
-}
+  #stage.dragging { cursor: grabbing; }
+  #result-canvas {
+    max-width: min(100vw, 1440px); max-height: min(100vh, 960px);
+    width: auto; height: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+  }
+
+  #ui {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.05); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.09); border-radius: 16px;
+    padding: 13px 22px; z-index: 10;
+  }
+  #toolName {
+    color: #fff; font-size: 17px; font-weight: 600; letter-spacing: 0.08em; width: 220px;
+  }
+  .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.1); flex-shrink: 0; }
+
+  #upload-box, #btn-export {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; color: rgba(255,255,255,0.55); font-size: 11px;
+    letter-spacing: 0.05em; padding: 6px 13px; cursor: pointer; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  #upload-box:hover, #btn-export:hover,
+  #upload-box.over { background: rgba(255,255,255,0.1); color: #fff; }
+  #filename { display: none; }
+  #image-file { display: none; }
+
+  .font-selector { position: relative; cursor: pointer; user-select: none; }
+  .font-current {
+    color: rgba(255,255,255,0.45); font-size: 12px;
+    letter-spacing: 0.04em; padding: 4px 2px; white-space: nowrap;
+  }
+  .font-menu {
+    position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+    background: #18181c; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 13px; padding: 6px; min-width: 170px;
+    display: none; flex-direction: column; gap: 2px; z-index: 30;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .font-selector.open .font-menu { display: flex; }
+  .font-opt {
+    padding: 9px 13px; border-radius: 8px; font-size: 13px; color: rgba(255,255,255,0.5);
+    cursor: pointer; transition: all 0.1s; white-space: nowrap;
+  }
+  .font-opt:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
+  .font-opt.active { background: rgba(255,255,255,0.1); color: #fff; }
+
+  #panel {
+    position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    background: rgba(10,10,14,0.78); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+    padding: 20px 18px; width: 172px; z-index: 10;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .ctrl { display: flex; flex-direction: column; gap: 7px; }
+  .ctrl-head {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+  }
+  .ctrl-head label { font-size: inherit; color: inherit; font-weight: 500; }
+  .ctrl-head .v { color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 2px;
+    background: rgba(255,255,255,0.12); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    border-radius: 50%; background: #fff; cursor: pointer;
+    box-shadow: 0 0 5px rgba(255,255,255,0.35);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 12px; height: 12px; border-radius: 50%; background: #fff; border: none; cursor: pointer;
+  }
+  .hr { height: 1px; background: rgba(255,255,255,0.07); }
+  .sec, .swatches { display: none; }
+  .hud, .legend { display: none; }
+
+  @media (max-width: 760px) {
+    #panel { right: 14px; width: 158px; }
+    #ui { max-width: calc(100vw - 24px); overflow-x: auto; }
+    #toolName { width: 170px; }
+  }
 </style>
 </head>
 <body>
+<div id="app">
+  <canvas id="source-canvas" style="display:none"></canvas>
+  <canvas id="work-canvas" style="display:none"></canvas>
 
-<canvas id="source-canvas" style="display:none"></canvas>
-<canvas id="work-canvas" style="display:none"></canvas>
-
-<div class="panel">
-  <div class="panel-header">
-    <h1>Heatmap Simulator</h1>
-    <p>Thermal color mapping for uploaded images</p>
+  <div id="viewport">
+    <div id="stage">
+      <canvas id="result-canvas" width="900" height="1120"></canvas>
+      <div class="hud" id="hud">
+        <span id="hud-size">900 x 1120</span>
+        <span id="hud-palette">THERMAL</span>
+        <span id="hud-heat">HEAT 78</span>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
   </div>
 
-  <div class="panel-body">
-    <div class="upload-box" id="upload-box">
-      <input type="file" id="image-file" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none">
-      <p>Drop image or click to upload</p>
-      <em id="filename">Default image loaded</em>
+  <div id="ui">
+    <div id="toolName">Heatmap Simulator</div>
+    <div class="sep"></div>
+
+    <div class="font-selector" id="paletteSelector">
+      <div class="font-current" id="paletteCurrent">True Heatmap</div>
+      <div class="font-menu" id="paletteMenu">
+        <div class="font-opt active" data-palette="thermal">True Heatmap</div>
+        <div class="font-opt" data-palette="iron">Iron Scan</div>
+        <div class="font-opt" data-palette="neon">Neon Thermal</div>
+        <div class="font-opt" data-palette="rainbow">Rainbow</div>
+        <div class="font-opt" data-palette="mono">Infrared Mono</div>
+      </div>
     </div>
 
-    <div class="hr"></div>
-    <div class="sec">Palette</div>
+    <select id="c-palette" style="display:none">
+      <option value="thermal">True Heatmap</option>
+      <option value="iron">Iron Scan</option>
+      <option value="neon">Neon Thermal</option>
+      <option value="rainbow">Rainbow</option>
+      <option value="mono">Infrared Mono</option>
+    </select>
 
-    <div class="ctrl">
-      <div class="ctrl-head"><label>Color Map</label></div>
-      <select id="c-palette" class="sel">
-        <option value="thermal">True Heatmap</option>
-        <option value="iron">Iron Scan</option>
-        <option value="neon">Neon Thermal</option>
-        <option value="rainbow">Rainbow</option>
-        <option value="mono">Infrared Mono</option>
-      </select>
-    </div>
+    <div class="sep"></div>
+    <button id="upload-box" type="button">Upload Image</button>
+    <input type="file" id="image-file" accept="image/png,image/jpeg,image/webp,image/gif">
+    <em id="filename">Default image loaded</em>
+    <div class="sep"></div>
+    <button id="btn-export" type="button">Export PNG</button>
+  </div>
 
-    <div class="swatches" id="swatches"></div>
-
-    <div class="hr"></div>
-    <div class="sec">Temperature</div>
-
+  <div id="panel">
     <div class="ctrl">
       <div class="ctrl-head"><label>Heat</label><span class="v" id="v-heat">78%</span></div>
       <input type="range" id="c-heat" min="0" max="100" value="78">
     </div>
-
     <div class="ctrl">
       <div class="ctrl-head"><label>Contrast</label><span class="v" id="v-contrast">62%</span></div>
       <input type="range" id="c-contrast" min="0" max="100" value="62">
     </div>
-
     <div class="ctrl">
       <div class="ctrl-head"><label>Threshold</label><span class="v" id="v-threshold">8%</span></div>
       <input type="range" id="c-threshold" min="0" max="80" value="8">
     </div>
-
     <div class="ctrl">
       <div class="ctrl-head"><label>Blur</label><span class="v" id="v-blur">3px</span></div>
       <input type="range" id="c-blur" min="0" max="18" value="3" step="0.5">
     </div>
-
     <div class="hr"></div>
-    <div class="sec">Signal</div>
-
     <div class="ctrl">
       <div class="ctrl-head"><label>Contour Bands</label><span class="v" id="v-bands">5</span></div>
       <input type="range" id="c-bands" min="0" max="18" value="5">
     </div>
-
     <div class="ctrl">
       <div class="ctrl-head"><label>Noise</label><span class="v" id="v-noise">2%</span></div>
       <input type="range" id="c-noise" min="0" max="40" value="2">
     </div>
-
     <div class="ctrl">
       <div class="ctrl-head"><label>Glow</label><span class="v" id="v-glow">24%</span></div>
       <input type="range" id="c-glow" min="0" max="100" value="24">
     </div>
-
     <div class="ctrl">
       <div class="ctrl-head"><label>Original Mix</label><span class="v" id="v-mix">0%</span></div>
       <input type="range" id="c-mix" min="0" max="80" value="0">
     </div>
-
-  </div>
-
-  <div class="panel-footer">
-    <button class="btn-export" id="btn-export">Export PNG</button>
-  </div>
-</div>
-
-<div class="preview">
-  <div class="stage" id="stage">
-    <canvas id="result-canvas" width="900" height="1120"></canvas>
-    <div class="hud" id="hud">
-      <span id="hud-size">900 x 1120</span>
-      <span id="hud-palette">THERMAL</span>
-      <span id="hud-heat">HEAT 78</span>
-    </div>
-    <div class="legend" id="legend"></div>
+    <div class="swatches" id="swatches"></div>
   </div>
 </div>
 
@@ -749,6 +537,27 @@ $('c-palette').addEventListener('change', () => {
   updateSwatches();
   scheduleRender();
 });
+
+const paletteSelector = $('paletteSelector');
+const paletteCurrent = $('paletteCurrent');
+paletteSelector.addEventListener('click', e => {
+  e.stopPropagation();
+  paletteSelector.classList.toggle('open');
+});
+document.addEventListener('click', () => paletteSelector.classList.remove('open'));
+document.querySelectorAll('[data-palette]').forEach(opt => {
+  opt.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('[data-palette]').forEach(o => o.classList.remove('active'));
+    opt.classList.add('active');
+    paletteCurrent.textContent = opt.textContent;
+    $('c-palette').value = opt.dataset.palette;
+    paletteSelector.classList.remove('open');
+    updateSwatches();
+    scheduleRender();
+  });
+});
+
 $('btn-export').addEventListener('click', () => {
   const a = document.createElement('a');
   const name = ($('filename').textContent || 'heatmap').replace(/\.[^.]+$/, '').replace(/[^a-z0-9-_]+/gi, '-');
