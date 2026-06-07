@@ -288,44 +288,94 @@ input[type="range"]::-moz-range-thumb {
 
 #main-svg { display: block; }
 
-/* ── MOBILE ── */
+/* ── MOBILE BOTTOM SHEET ── */
 
 @media (max-width: 640px) {
   body {
-    height: auto;
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
   }
 
+  /* Canvas stays full screen — just add bottom padding so dots
+     aren't hidden behind the collapsed panel handle */
   .preview {
-    position: relative;
-    inset: auto;
-    width: 100%;
-    height: 56vw;
-    min-height: 240px;
-    padding: 20px;
-    flex-shrink: 0;
-    order: 1;
+    padding-bottom: 72px;
   }
 
+  /* Bottom sheet — collapsed by default, shows only the handle strip */
   .panel {
-    position: relative;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     top: auto;
-    right: auto;
-    transform: none;
+    transform: translateY(calc(100% - 64px));
     width: 100%;
-    max-height: none;
-    border-radius: 0;
-    background: var(--bg);
-    border: none;
-    border-top: 1px solid var(--border);
-    order: 2;
+    max-height: 80vh;
+    border-radius: 16px 16px 0 0;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-bottom: none;
+    background: rgba(9,9,11,0.97);
+    transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+    z-index: 20;
   }
 
+  .panel.open {
+    transform: translateY(0);
+  }
+
+  /* Drag handle bar */
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    margin: 12px auto 4px;
+    flex-shrink: 0;
+  }
+
+  .panel-header {
+    cursor: pointer;
+    padding-top: 4px;
+  }
+
+  /* Controls panel scrolls internally when open */
   .panel-body {
-    overflow-y: visible;
-    max-height: none;
+    max-height: calc(80vh - 130px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px;
+    gap: 18px;
+  }
+
+  .panel-footer {
+    padding: 14px 20px 28px;
+  }
+
+  /* Larger touch targets */
+  .tab { padding: 10px; font-size: 14px; }
+
+  #char-input { height: 52px; font-size: 20px; }
+
+  .font-select {
+    padding: 12px 30px 12px 12px;
+    font-size: 15px;
+  }
+
+  .ctrl-head label { font-size: 15px; }
+  .ctrl-head .v { font-size: 13px; }
+
+  input[type="range"] { height: 6px; }
+
+  input[type="range"]::-webkit-slider-thumb {
+    width: 22px;
+    height: 28px;
+  }
+
+  .btn-bake, .btn-export {
+    padding: 14px;
+    font-size: 15px;
   }
 }
 </style>
@@ -334,8 +384,9 @@ input[type="range"]::-moz-range-thumb {
 
 <canvas id="hidden-canvas" style="display:none"></canvas>
 
-<div class="panel">
-  <div class="panel-header">
+<div class="panel" id="panel">
+  <div class="sheet-handle"></div>
+  <div class="panel-header" id="panel-header">
     <h1>Halftone Simulator</h1>
     <p>Circle grid & halftone effects</p>
   </div>
@@ -1144,6 +1195,29 @@ window.addEventListener('mouseup', () => {
   dragging = false;
   previewEl.style.cursor = '';
 });
+
+// ── Mobile bottom sheet toggle ────────────────────────────────────────────────
+const panelEl  = $('panel');
+const headerEl = $('panel-header');
+const mq = window.matchMedia('(max-width: 640px)');
+
+function setupSheet(matches) {
+  if (matches) {
+    headerEl.addEventListener('click', toggleSheet);
+    document.querySelector('.sheet-handle').addEventListener('click', toggleSheet);
+  } else {
+    panelEl.classList.remove('open');
+    headerEl.removeEventListener('click', toggleSheet);
+  }
+}
+
+function toggleSheet() {
+  panelEl.classList.toggle('open');
+  sizeSvg();
+}
+
+mq.addEventListener('change', e => setupSheet(e.matches));
+setupSheet(mq.matches);
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 sizeSvg();
