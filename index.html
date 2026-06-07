@@ -124,6 +124,14 @@ body {
     radial-gradient(circle at 50% 50%, #f7f7f7 0 18%, #d6d6d6 19% 31%, #20202a 32% 58%, #060609 59% 100%);
 }
 
+.card-thumb.ribbon-thumb {
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.22) 0 2px, rgba(0,0,0,0.12) 2px 9px, rgba(255,255,255,0.08) 9px 12px),
+    radial-gradient(circle at 54% 32%, #f2d4bf 0 11%, transparent 21%),
+    radial-gradient(circle at 48% 58%, #d96b21 0 18%, transparent 34%),
+    linear-gradient(135deg, #0c3a25 0%, #101010 52%, #632a12 100%);
+}
+
 .card-info {
   padding: 12px 14px 16px;
   display: flex;
@@ -244,7 +252,9 @@ footer {
   </a>
 
   <a class="card" href="heatmap-simulator/">
-    <div class="card-thumb heatmap-thumb"></div>
+    <div class="card-thumb">
+      <video autoplay loop muted playsinline src="heatmap-simulator/Th-Heatmap.mp4"></video>
+    </div>
     <div class="card-info">
       <div class="card-text">
         <div class="card-name">Heatmap Simulator</div>
@@ -260,6 +270,17 @@ footer {
       <div class="card-text">
         <div class="card-name">Fisheye Effect</div>
         <div class="card-category">Warp uploaded images through a wide-angle fisheye lens.</div>
+      </div>
+      <span class="card-btn">Access</span>
+    </div>
+  </a>
+
+  <a class="card" href="ribbon-simulator/">
+    <div class="card-thumb ribbon-thumb"></div>
+    <div class="card-info">
+      <div class="card-text">
+        <div class="card-name">Ribbon Simulator</div>
+        <div class="card-category">Turn an uploaded image into refractive vertical glass ribbons.</div>
       </div>
       <span class="card-btn">Access</span>
     </div>
