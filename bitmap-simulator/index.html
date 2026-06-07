@@ -354,19 +354,6 @@ input[type="range"]::-moz-range-thumb {
     </div>
 
     <div class="hr"></div>
-    <div class="sec">Wave</div>
-
-    <div class="ctrl">
-      <div class="ctrl-head"><label>Amount</label><span class="v" id="v-waveAmt">0%</span></div>
-      <input type="range" id="c-waveAmt" min="0" max="100" value="0">
-    </div>
-
-    <div class="ctrl">
-      <div class="ctrl-head"><label>Frequency</label><span class="v" id="v-waveFreq">2</span></div>
-      <input type="range" id="c-waveFreq" min="1" max="12" value="2" step="0.5">
-    </div>
-
-    <div class="hr"></div>
     <div class="sec">Sampling</div>
 
     <div class="ctrl">
@@ -536,8 +523,6 @@ function render() {
   const sens     = val('c-sens')    / 100;
   const gradDir  = $('c-gradDir').value;
   const gradStr  = val('c-gradStr') / 100;
-  const waveAmt  = val('c-waveAmt') / 100;
-  const waveFreq = val('c-waveFreq');
 
   let px, W, H;
 
@@ -575,18 +560,15 @@ function render() {
     const cov = sample(px, cvx, cvy, sampleR);
     if (cov < sens) return;
 
-    // Gradient modifier (position-based size control)
-    const nx  = Math.max(0, Math.min(1, cx / W));
-    const ny  = Math.max(0, Math.min(1, cy / H));
-    const gm  = gradientMod(nx, ny, gradDir, gradStr);
+    const nx = Math.max(0, Math.min(1, cx / W));
+    const ny = Math.max(0, Math.min(1, cy / H));
 
-    // Wave modifier (sinusoidal size pulse)
-    const wm  = waveAmt > 0
-      ? 1 + waveAmt * 0.6 * Math.sin(nx * waveFreq * Math.PI * 2)
-      : 1;
+    // Strength controls darkness contrast — direction=None: uniform→progressive dots
+    // direction set: adds positional size gradient on top
+    const darkMod = (1 - gradStr) + gradStr * cov;
+    const gm      = gradientMod(nx, ny, gradDir, gradStr);
 
-    // Final half-size — minimum 0.5 so tiny edge dots stay visible
-    const halfSize = Math.max(0.5, maxR * cov * gm * Math.max(0.05, wm));
+    const halfSize = Math.max(0.5, maxR * darkMod * gm);
 
     const el = document.createElementNS(ns, 'rect');
     el.setAttribute('x',      (cx - halfSize).toFixed(2));
@@ -623,8 +605,6 @@ const ctrls = [
   ['c-density',  'v-density',  v => v|0        ],
   ['c-size',     'v-size',     v => `${v|0}%`  ],
   ['c-gradStr',  'v-gradStr',  v => `${v|0}%`  ],
-  ['c-waveAmt',  'v-waveAmt',  v => `${v|0}%`  ],
-  ['c-waveFreq', 'v-waveFreq', v => parseFloat(v).toFixed(1)],
   ['c-sens',     'v-sens',     v => v|0        ],
 ];
 

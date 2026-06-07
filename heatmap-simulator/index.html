@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<title>Halftone Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:     #09090B;
+  --bg2:    #18181B;
+  --bg3:    #27272A;
+  --border: rgba(39,39,42,0.6);
+  --text:   #F4F4F5;
+  --text2:  #A1A1AA;
+  --text3:  #71717A;
+  --text4:  #52525B;
+  --accent: #FACC15;
+  --paper:  #f0ebe1;
+  --ink:    #0e0e0e;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 13px;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── FLOATING PANEL ── */
+
+.panel {
+  position: fixed;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 220px;
+  max-height: 90vh;
+  background: rgba(9,9,11,0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.panel-header h1 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.panel-header p {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 3px;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+.panel-footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── TABS ── */
+
+.tabs {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text3);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+}
+
+.tab.active { background: var(--bg3); color: var(--text); }
+
+/* ── CHAR INPUT ── */
+
+.char-row { display: flex; flex-direction: column; gap: 8px; }
+
+#char-input {
+  flex: 1;
+  height: 44px;
+  background: var(--bg2);
+  border: 1px solid var(--bg3);
+  border-radius: 2px;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+  caret-color: var(--text);
+  padding: 0 8px;
+}
+
+#char-input:focus { border-color: #52525B; }
+
+.font-select {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--bg3);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  padding: 7px 30px 7px 10px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2371717A'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.font-select:focus { border-color: #52525B; }
+
+/* ── UPLOAD ── */
+
+.upload-box {
+  border: 2px dashed var(--bg3);
+  border-radius: 2px;
+  padding: 16px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.upload-box:hover, .upload-box.over { border-color: var(--accent); background: rgba(250,204,21,.04); }
+
+.upload-box p  { font-size: 12px; color: var(--text2); }
+.upload-box em { font-size: 11px; color: var(--text3); font-style: normal; display: block; margin-top: 3px; word-break: break-all; }
+
+/* ── SECTION + CONTROLS ── */
+
+.sec {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text4);
+  margin-bottom: -6px;
+}
+
+.hr { height: 1px; background: var(--border); }
+
+.ctrl { display: flex; flex-direction: column; gap: 7px; }
+
+.ctrl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.ctrl-head label { font-size: 13px; color: var(--text2); font-weight: 500; }
+.ctrl-head .v    { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg3);
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 16px;
+  border-radius: 2px;
+  background: #D4D4D8;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover { background: #fff; }
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px; height: 16px;
+  border-radius: 2px;
+  background: #D4D4D8;
+  border: none;
+  cursor: pointer;
+}
+
+/* ── BUTTONS ── */
+
+.btn-bake {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid #3F3F46;
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  margin-bottom: 8px;
+}
+
+.btn-bake:hover { background: var(--bg2); }
+.btn-bake.baked { background: var(--bg3); border-color: #52525B; color: #7dba7d; }
+
+.btn-export {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-export:hover { background: #FDE047; }
+
+/* ── PREVIEW ── */
+
+.preview {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px;
+  background: #e8e3d8;
+  overflow: hidden;
+}
+
+.preview-wrap {
+  overflow: hidden;
+  line-height: 0;
+}
+
+#main-svg { display: block; }
+</style>
+</head>
+<body>
+
+<canvas id="hidden-canvas" style="display:none"></canvas>
+
+<div class="panel">
+  <div class="panel-header">
+    <h1>Halftone Simulator</h1>
+    <p>Circle grid & halftone effects</p>
+  </div>
+
+  <div class="panel-body">
+
+    <div class="tabs">
+      <div class="tab active" data-mode="char">Character</div>
+      <div class="tab" data-mode="svg">SVG File</div>
+    </div>
+
+    <!-- Character mode -->
+    <div id="mode-char">
+      <div class="char-row">
+        <input type="text" id="char-input" maxlength="20" value="A"
+               spellcheck="false" autocomplete="off" autocorrect="off">
+        <select id="font-select" class="font-select">
+          <option value="'Arial Black','Helvetica Neue',sans-serif">Arial Black</option>
+          <option value="Impact,Haettenschweiler,sans-serif">Impact</option>
+          <option value="'Trebuchet MS',sans-serif">Trebuchet</option>
+          <option value="Georgia,serif">Georgia</option>
+          <option value="'Courier New',monospace">Courier</option>
+          <option value="'Times New Roman',serif">Times</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- SVG upload mode -->
+    <div id="mode-svg" style="display:none">
+      <div class="upload-box" id="upload-box">
+        <input type="file" id="svg-file" accept=".svg" style="display:none">
+        <p>Drop SVG or click to upload</p>
+        <em id="filename"></em>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Grid</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Density</label><span class="v" id="v-density">10</span></div>
+      <input type="range" id="c-density" min="4" max="28" value="10">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Circle Size</label><span class="v" id="v-csize">85%</span></div>
+      <input type="range" id="c-csize" min="30" max="100" value="85">
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Ink</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Bleed</label><span class="v" id="v-bleed">0%</span></div>
+      <input type="range" id="c-bleed" min="0" max="50" value="0">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Grunge</label><span class="v" id="v-grunge">0</span></div>
+      <input type="range" id="c-grunge" min="0" max="60" value="0" step="0.5">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Variation</label><span class="v" id="v-dotvar">0%</span></div>
+      <input type="range" id="c-dotvar" min="0" max="100" value="0">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>H Bands</label><span class="v" id="v-hstretch">Off</span></div>
+      <input type="range" id="c-hstretch" min="0" max="100" value="0" step="1">
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Sampling</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Fill Sensitivity</label><span class="v" id="v-sens">40</span></div>
+      <input type="range" id="c-sens" min="5" max="92" value="40">
+    </div>
+
+  </div>
+
+  <div class="panel-footer">
+    <button class="btn-bake" id="btn-bake">Bake to Vector</button>
+    <button class="btn-export" id="btn-export">Export SVG</button>
+  </div>
+</div>
+
+<div class="preview">
+  <div class="preview-wrap" id="preview-wrap">
+    <svg id="main-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+      <defs>
+        <!-- Grid paper pattern — updated via JS -->
+        <pattern id="grid-pat" patternUnits="userSpaceOnUse" width="50" height="50">
+          <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(0,0,0,0.11)" stroke-width="0.4"/>
+        </pattern>
+        <!-- Grunge-only filter — applied only when grunge > 0 -->
+        <filter id="ink-filter" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" seed="13" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </defs>
+      <!-- Paper background -->
+      <rect width="500" height="500" fill="#e8e3d8"/>
+      <!-- Grid lines -->
+      <rect width="500" height="500" fill="url(#grid-pat)"/>
+      <!-- Circles — rendered here -->
+      <g id="circles-grp"></g>
+    </svg>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Constants ────────────────────────────────────────────────────────────────
+const SZ     = 500;   // SVG height base
+const CSCALE = 3;     // canvas oversample factor
+
+// ── Measure word aspect ratio to size canvas width dynamically ───────────────
+function computeDimensions(text, font) {
+  if (!text) return { W: SZ, H: SZ };
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = `900 1000px ${font}`;
+  const m  = ctx.measureText(text);
+  const tw = m.width;
+  const th = (m.actualBoundingBoxAscent  || 720) +
+             (m.actualBoundingBoxDescent || 120);
+  const aspect = tw / Math.max(th, 1);
+  return { W: Math.round(SZ * Math.max(0.4, aspect) * 1.15), H: SZ };
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+let mode        = 'char';
+let uploadedPx  = null;   // ImageData from uploaded SVG
+
+// ── DOM ──────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+const mainSvg    = $('main-svg');
+const circlesGrp = $('circles-grp');
+const inkFilter  = $('ink-filter');
+const gridPat    = $('grid-pat');
+const hiddenCvs  = $('hidden-canvas');
+const previewWrp = $('preview-wrap');
+const charInput  = $('char-input');
+const fontSel    = $('font-select');
+const uploadBox  = $('upload-box');
+const svgFile    = $('svg-file');
+const filenameEl = $('filename');
+
+// Control / value display pairs
+const controls = {
+  density:  { el: $('c-density'),  disp: $('v-density'),  fmt: v => v                               },
+  csize:    { el: $('c-csize'),    disp: $('v-csize'),    fmt: v => `${v}%`                         },
+  bleed:    { el: $('c-bleed'),    disp: $('v-bleed'),    fmt: v => `${v}%`                         },
+  grunge:   { el: $('c-grunge'),   disp: $('v-grunge'),   fmt: v => parseFloat(v).toFixed(1)        },
+  dotvar:   { el: $('c-dotvar'),   disp: $('v-dotvar'),   fmt: v => `${v}%`                         },
+  hstretch: { el: $('c-hstretch'), disp: $('v-hstretch'), fmt: v => v == 0 ? 'Off' : `${v}%`       },
+  sens:     { el: $('c-sens'),     disp: $('v-sens'),     fmt: v => v                               },
+};
+
+function val(key) { return parseFloat(controls[key].el.value); }
+
+// ── Resize SVG preview to fit available space ────────────────────────────────
+function sizeSvg() {
+  const vb = (mainSvg.getAttribute('viewBox') || `0 0 ${SZ} ${SZ}`).split(' ').map(Number);
+  const vW = vb[2] || SZ;
+  const vH = vb[3] || SZ;
+  const aspect = vW / vH;
+
+  const availW = previewWrp.parentElement.clientWidth  - 72;
+  const availH = previewWrp.parentElement.clientHeight - 72;
+
+  let pw, ph;
+  if (availW / availH > aspect) {
+    ph = Math.max(200, Math.min(availH, 600));
+    pw = Math.round(ph * aspect);
+  } else {
+    pw = Math.max(200, Math.min(availW, 1400));
+    ph = Math.round(pw / aspect);
+  }
+
+  mainSvg.setAttribute('width',  pw);
+  mainSvg.setAttribute('height', ph);
+}
+
+// ── Hex grid generation ──────────────────────────────────────────────────────
+function hexGrid(density, W, H) {
+  const pts = [];
+  const cs  = H / density;
+  const rs  = cs * (Math.sqrt(3) / 2);
+  const rows = Math.ceil(H / rs) + 2;
+  const cols = Math.ceil(W / cs) + 3;
+
+  for (let r = -1; r < rows; r++) {
+    const ox = (r % 2 !== 0) ? cs / 2 : 0;
+    for (let c = -1; c < cols; c++) {
+      const cx = c * cs + ox + cs / 2;
+      const cy = r * rs + rs / 2;
+      pts.push([cx, cy]);
+    }
+  }
+  return pts;
+}
+
+// ── Draw character on hidden canvas ─────────────────────────────────────────
+function renderChar(char, font, W, H) {
+  const cW = W * CSCALE;
+  const cH = H * CSCALE;
+  hiddenCvs.width  = cW;
+  hiddenCvs.height = cH;
+  const ctx = hiddenCvs.getContext('2d');
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, cW, cH);
+  ctx.fillStyle = '#000';
+
+  let fs = cH * 0.88;
+  ctx.font = `900 ${fs}px ${font}`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  const m   = ctx.measureText(char);
+  const tw  = m.width;
+  const th  = (m.actualBoundingBoxAscent  || fs * 0.72) +
+              (m.actualBoundingBoxDescent || fs * 0.12);
+  const scaleW = (cW * 0.88) / Math.max(tw, 1);
+  const scaleH = (cH * 0.88) / Math.max(th, 1);
+  const s = Math.min(scaleW, scaleH);
+  if (s < 1) {
+    fs *= s;
+    ctx.font = `900 ${fs}px ${font}`;
+  }
+
+  const m2     = ctx.measureText(char);
+  const midOff = ((m2.actualBoundingBoxAscent || 0) - (m2.actualBoundingBoxDescent || 0)) / 2;
+  ctx.fillText(char, cW / 2, cH / 2 - midOff * 0.1);
+
+  return ctx.getImageData(0, 0, cW, cH);
+}
+
+// ── Sample darkness along a ring (how surrounded by letter material) ────────
+function sampleRing(pixData, cx, cy, r, W, H) {
+  const N = 12;
+  let inside = 0;
+  for (let i = 0; i < N; i++) {
+    const angle = (i / N) * Math.PI * 2;
+    const x = Math.round(cx + Math.cos(angle) * r);
+    const y = Math.round(cy + Math.sin(angle) * r);
+    if (x < 0 || x >= W || y < 0 || y >= H) continue;
+    if (pixData[(y * W + x) * 4] < 128) inside++;
+  }
+  return inside / N;
+}
+
+// ── Sample darkness fraction in a circle area on the canvas ─────────────────
+function sample(px, cx, cy, r) {
+  // cx, cy, r are in canvas-pixel coords
+  const step = Math.max(1, r / 5);
+  let dark = 0, total = 0;
+
+  for (let dx = -r; dx <= r; dx += step) {
+    for (let dy = -r; dy <= r; dy += step) {
+      if (dx * dx + dy * dy > r * r) continue;
+      const x = Math.round(cx + dx);
+      const y = Math.round(cy + dy);
+      const sz = hiddenCvs.width;
+      if (x < 0 || x >= sz || y < 0 || y >= sz) { total++; continue; }
+      const i = (y * sz + x) * 4;
+      const lum = (px.data[i] + px.data[i+1] + px.data[i+2]) / 3;
+      if (lum < 128) dark++;
+      total++;
+    }
+  }
+  return total > 0 ? dark / total : 0;
+}
+
+// ── Rebuild SVG filter (grunge only — no blur, stays vector-sharp) ───────────
+function rebuildFilter() {
+  const grunge = val('grunge');
+
+  if (grunge < 0.2) {
+    circlesGrp.removeAttribute('filter');
+    return;
+  }
+
+  // Displacement-only: rough edges without any blur or raster bleed
+  const bf = (0.028 + grunge * 0.0005).toFixed(4);
+  inkFilter.innerHTML = `
+    <feTurbulence type="fractalNoise" baseFrequency="${bf}" numOctaves="4" seed="13" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="${(grunge * 0.7).toFixed(2)}"
+      xChannelSelector="R" yChannelSelector="G"/>`;
+
+  circlesGrp.setAttribute('filter', 'url(#ink-filter)');
+}
+
+// ── Update grid paper background ─────────────────────────────────────────────
+function updateGridBg(colSpacing) {
+  const cs = colSpacing.toFixed(2);
+  gridPat.setAttribute('width',  cs);
+  gridPat.setAttribute('height', cs);
+  gridPat.querySelector('path').setAttribute('d', `M ${cs} 0 L 0 0 0 ${cs}`);
+}
+
+// ── Main render ──────────────────────────────────────────────────────────────
+let pending = false;
+function scheduleRender() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; render(); });
+}
+
+function render() {
+  const density  = Math.round(val('density'));
+  const csPct    = val('csize') / 100;
+  const sens     = val('sens')  / 100;
+  const bleedPct = val('bleed') / 100;
+
+  let px, W, H;
+
+  if (mode === 'char') {
+    const ch   = charInput.value || '?';
+    const font = fontSel.value;
+    ({ W, H } = computeDimensions(ch, font));
+    px = renderChar(ch, font, W, H);
+  } else if (mode === 'svg' && uploadedPx) {
+    W  = Math.round(uploadedPx.width  / CSCALE);
+    H  = Math.round(uploadedPx.height / CSCALE);
+    px = uploadedPx;
+  } else {
+    circlesGrp.innerHTML = '';
+    return;
+  }
+
+  // Sync SVG viewBox + background rects to word dimensions
+  mainSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const bgRects = mainSvg.querySelectorAll('rect');
+  bgRects[0].setAttribute('width', W); bgRects[0].setAttribute('height', H);
+  bgRects[1].setAttribute('width', W); bgRects[1].setAttribute('height', H);
+
+  const colSpacing = H / density;
+  const circleR    = colSpacing * csPct / 2 + colSpacing * bleedPct;
+  const sampleR    = colSpacing * CSCALE * csPct * 0.44;
+  const varPct     = val('dotvar') / 100;
+  const hStretch   = val('hstretch') / 10;
+  // Ring radii at 0.6, 1.2, 2.0 cell spacings — multi-scale depth estimate
+  const ringRadii  = [colSpacing * CSCALE * 0.6, colSpacing * CSCALE * 1.2, colSpacing * CSCALE * 2.0];
+
+  updateGridBg(colSpacing);
+
+  const pts      = hexGrid(density, W, H);
+  const ns       = 'http://www.w3.org/2000/svg';
+  const frag     = document.createDocumentFragment();
+  const rowSpacing = H / density * (Math.sqrt(3) / 2);
+
+  // Collect visible dots first
+  const dots = [];
+  pts.forEach(([cx, cy]) => {
+    const cvx = cx * CSCALE;
+    const cvy = cy * CSCALE;
+    const cov = sample(px, cvx, cvy, sampleR);
+    if (cov >= sens) {
+      let sizeNorm = 1;
+      if (varPct > 0) {
+        const PW = hiddenCvs.width, PH = hiddenCvs.height;
+        const d0 = sampleRing(px.data, cvx, cvy, ringRadii[0], PW, PH);
+        const d1 = sampleRing(px.data, cvx, cvy, ringRadii[1], PW, PH);
+        const d2 = sampleRing(px.data, cvx, cvy, ringRadii[2], PW, PH);
+        sizeNorm = Math.pow(d0 * 0.5 + d1 * 0.35 + d2 * 0.15, 0.55);
+      }
+      const r = circleR * Math.max(0.06, 1 - varPct * (1 - sizeNorm) * 0.94);
+      dots.push({ cx, cy, r });
+    }
+  });
+
+  if (hStretch > 0) {
+    // Band mode: variable-height stripes — taller at stroke center, tapered at edges
+    const numBands    = Math.round(density * 3);
+    const bandSpacing = H / numBands;
+    const minGap      = 0.01 + (val('hstretch') / 100) * 0.65;
+    const maxBandH    = bandSpacing * (1 - minGap);
+    const cW          = px.width;
+    const cH          = px.height;
+    const halfZone    = Math.round(bandSpacing * CSCALE * 0.5);
+    const xStep       = 3;
+    const numX        = Math.ceil(cW / xStep);
+    const minCov      = 0.08;
+
+    for (let b = 0; b < numBands; b++) {
+      // v: -1 = thin at bottom, 0 = uniform, +1 = thin at top
+      const v = (varPct - 0.5) * 2;
+      const t = numBands > 1 ? b / (numBands - 1) : 0.5; // 0=top → 1=bottom
+      const bandScale = 1 - Math.abs(v) * 0.82 * (v >= 0 ? 1 - t : t);
+      const effectiveBandH = maxBandH * bandScale;
+      const cy    = (b + 0.5) * bandSpacing;
+      const scanY = Math.round(cy * CSCALE);
+      const yLo   = Math.max(0, scanY - halfZone);
+      const yHi   = Math.min(cH - 1, scanY + halfZone);
+      const yRange = yHi - yLo + 1;
+
+      // Sample vertical ink coverage at each x position
+      const covs = new Float32Array(numX);
+      for (let xi = 0; xi < numX; xi++) {
+        const cpx = xi * xStep;
+        if (cpx >= cW) continue;
+        let dark = 0;
+        for (let sy = yLo; sy <= yHi; sy++) {
+          if (px.data[(sy * cW + cpx) * 4] < 128) dark++;
+        }
+        covs[xi] = dark / yRange;
+      }
+
+      // Light smoothing to avoid per-pixel jitter
+      for (let i = 1; i < numX - 1; i++) {
+        covs[i] = (covs[i - 1] + covs[i] * 2 + covs[i + 1]) / 4;
+      }
+
+      // Trace contiguous ink runs and build variable-height closed path
+      let inRun = false, runStart = 0;
+      for (let xi = 0; xi <= numX; xi++) {
+        const cov = xi < numX ? covs[xi] : 0;
+        if (!inRun && cov > minCov) {
+          runStart = xi; inRun = true;
+        } else if (inRun && (cov <= minCov || xi === numX)) {
+          inRun = false;
+          const runEnd = xi - 1;
+          if (runEnd <= runStart) continue;
+
+          const topPts = [], botPts = [];
+          for (let i = runStart; i <= runEnd; i++) {
+            const x = (i * xStep) / CSCALE;
+            const h = effectiveBandH * covs[i];
+            topPts.push([x, cy - h * 0.5]);
+            botPts.push([x, cy + h * 0.5]);
+          }
+
+          let d = `M ${topPts[0][0].toFixed(2)} ${topPts[0][1].toFixed(2)}`;
+          for (let i = 1; i < topPts.length; i++)
+            d += ` L ${topPts[i][0].toFixed(2)} ${topPts[i][1].toFixed(2)}`;
+          for (let i = botPts.length - 1; i >= 0; i--)
+            d += ` L ${botPts[i][0].toFixed(2)} ${botPts[i][1].toFixed(2)}`;
+          d += ' Z';
+
+          const el = document.createElementNS(ns, 'path');
+          el.setAttribute('d', d);
+          el.setAttribute('fill', '#0e0e0e');
+          frag.appendChild(el);
+        }
+      }
+    }
+  } else {
+    // Circle mode
+    dots.forEach(({ cx, cy, r }) => {
+      const el = document.createElementNS(ns, 'circle');
+      el.setAttribute('cx', cx.toFixed(2));
+      el.setAttribute('cy', cy.toFixed(2));
+      el.setAttribute('r',  r.toFixed(2));
+      el.setAttribute('fill', '#0e0e0e');
+      frag.appendChild(el);
+    });
+  }
+
+  circlesGrp.innerHTML = '';
+  circlesGrp.appendChild(frag);
+  rebuildFilter();
+  sizeSvg();
+}
+
+// ── Event: tabs ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    mode = tab.dataset.mode;
+    $('mode-char').style.display = mode === 'char' ? '' : 'none';
+    $('mode-svg').style.display  = mode === 'svg'  ? '' : 'none';
+    scheduleRender();
+  });
+});
+
+// ── Event: char input ────────────────────────────────────────────────────────
+charInput.addEventListener('input', () => {
+  scheduleRender();
+});
+fontSel.addEventListener('change', scheduleRender);
+
+// ── Event: sliders ───────────────────────────────────────────────────────────
+Object.entries(controls).forEach(([key, { el, disp, fmt }]) => {
+  el.addEventListener('input', () => {
+    disp.textContent = fmt(el.value);
+    if (key === 'grunge') {
+      rebuildFilter();
+    } else {
+      scheduleRender();
+    }
+  });
+});
+
+// ── Event: SVG upload ────────────────────────────────────────────────────────
+uploadBox.addEventListener('click', () => svgFile.click());
+
+uploadBox.addEventListener('dragover', e => {
+  e.preventDefault(); uploadBox.classList.add('over');
+});
+uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('over'));
+uploadBox.addEventListener('drop', e => {
+  e.preventDefault(); uploadBox.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) loadSVG(f);
+});
+svgFile.addEventListener('change', () => { if (svgFile.files[0]) loadSVG(svgFile.files[0]); });
+
+function loadSVG(file) {
+  filenameEl.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const sz = SZ * CSCALE;
+      hiddenCvs.width = hiddenCvs.height = sz;
+      const ctx = hiddenCvs.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, sz, sz);
+      const s = Math.min(sz / img.width, sz / img.height) * 0.84;
+      const w = img.width * s, h = img.height * s;
+      ctx.drawImage(img, (sz - w) / 2, (sz - h) / 2, w, h);
+      uploadedPx = ctx.getImageData(0, 0, sz, sz);
+      scheduleRender();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Event: export ────────────────────────────────────────────────────────────
+$('btn-export').addEventListener('click', () => {
+  const clone = mainSvg.cloneNode(true);
+  clone.setAttribute('xmlns',       'http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  const vb = mainSvg.getAttribute('viewBox').split(' ').map(Number);
+  clone.setAttribute('width',  vb[2]);
+  clone.setAttribute('height', vb[3]);
+
+  const str  = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+               new XMLSerializer().serializeToString(clone);
+  const blob = new Blob([str], { type: 'image/svg+xml;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `circle-grid-${(charInput.value || 'export').replace(/\s+/g, '-')}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ── Bake: rasterize SVG → marching squares → clean path ─────────────────────
+
+// ── Ramer-Douglas-Peucker simplification ─────────────────────────────────────
+function rdp(pts, eps) {
+  if (pts.length < 3) return pts;
+  let maxD = 0, maxI = 0;
+  const [x1, y1] = pts[0];
+  const [x2, y2] = pts[pts.length - 1];
+  const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = len === 0
+      ? Math.hypot(pts[i][0] - x1, pts[i][1] - y1)
+      : Math.abs(dy * pts[i][0] - dx * pts[i][1] + x2 * y1 - y2 * x1) / len;
+    if (d > maxD) { maxD = d; maxI = i; }
+  }
+  if (maxD > eps) {
+    const a = rdp(pts.slice(0, maxI + 1), eps);
+    const b = rdp(pts.slice(maxI), eps);
+    return [...a.slice(0, -1), ...b];
+  }
+  return [pts[0], pts[pts.length - 1]];
+}
+
+// ── Marching squares — correct edge table, O(n) hash chaining ────────────────
+function marchingSquares(data, w, h, threshold) {
+  // Binary grid: 1 = dark ink, 0 = light background
+  const grid = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    // Use red channel (for black ink: R≈14, background R≈232)
+    grid[i] = data[i * 4] < threshold ? 1 : 0;
+  }
+
+  // Correct edge table indexed by: tl*8 + tr*4 + br*2 + bl
+  const E = [
+    [],                                      // 0:  0000
+    [[0,0.5],[0.5,1]],                       // 1:  0001 bl
+    [[0.5,1],[1,0.5]],                       // 2:  0010 br
+    [[0,0.5],[1,0.5]],                       // 3:  0011 bl+br
+    [[1,0.5],[0.5,0]],                       // 4:  0100 tr
+    [[0,0.5],[0.5,0],[1,0.5],[0.5,1]],      // 5:  0101 tr+bl saddle
+    [[0.5,0],[0.5,1]],                       // 6:  0110 tr+br
+    [[0,0.5],[0.5,0]],                       // 7:  0111 tr+br+bl
+    [[0.5,0],[0,0.5]],                       // 8:  1000 tl
+    [[0.5,0],[0.5,1]],                       // 9:  1001 tl+bl
+    [[0.5,0],[1,0.5],[0.5,1],[0,0.5]],      // 10: 1010 tl+br saddle
+    [[0.5,0],[1,0.5]],                       // 11: 1011 tl+br+bl
+    [[1,0.5],[0,0.5]],                       // 12: 1100 tl+tr
+    [[1,0.5],[0.5,1]],                       // 13: 1101 tl+tr+bl
+    [[0.5,1],[0,0.5]],                       // 14: 1110 tl+tr+br
+    [],                                      // 15: 1111
+  ];
+
+  const segs = [];
+  for (let y = 0; y < h - 1; y++) {
+    for (let x = 0; x < w - 1; x++) {
+      const tl = grid[y       * w + x];
+      const tr = grid[y       * w + x + 1];
+      const br = grid[(y + 1) * w + x + 1];
+      const bl = grid[(y + 1) * w + x];
+      const edges = E[tl * 8 + tr * 4 + br * 2 + bl];
+      for (let i = 0; i < edges.length; i += 2) {
+        segs.push(
+          x + edges[i][0],   y + edges[i][1],
+          x + edges[i+1][0], y + edges[i+1][1]
+        );
+      }
+    }
+  }
+  if (segs.length === 0) return [];
+
+  const n = segs.length / 4;
+  const used = new Uint8Array(n);
+  const ptKey = (x, y) => `${(x * 2).toFixed(0)},${(y * 2).toFixed(0)}`;
+
+  const map = new Map();
+  for (let i = 0; i < n; i++) {
+    const k1 = ptKey(segs[i*4],   segs[i*4+1]);
+    const k2 = ptKey(segs[i*4+2], segs[i*4+3]);
+    if (!map.has(k1)) map.set(k1, []);
+    if (!map.has(k2)) map.set(k2, []);
+    map.get(k1).push(i);
+    map.get(k2).push(i);
+  }
+
+  const polys = [];
+  for (let s = 0; s < n; s++) {
+    if (used[s]) continue;
+    used[s] = 1;
+    let cx = segs[s*4+2], cy = segs[s*4+3];
+    const poly = [[segs[s*4], segs[s*4+1]], [cx, cy]];
+
+    while (true) {
+      const neighbors = map.get(ptKey(cx, cy));
+      let found = false;
+      if (neighbors) {
+        for (const ni of neighbors) {
+          if (used[ni]) continue;
+          used[ni] = 1;
+          const ax = segs[ni*4], ay = segs[ni*4+1];
+          const bx = segs[ni*4+2], by = segs[ni*4+3];
+          if (Math.abs(ax - cx) < 0.01 && Math.abs(ay - cy) < 0.01) {
+            cx = bx; cy = by;
+          } else {
+            cx = ax; cy = ay;
+          }
+          poly.push([cx, cy]);
+          found = true;
+          break;
+        }
+      }
+      if (!found) break;
+    }
+    if (poly.length > 6) polys.push(poly);
+  }
+  return polys;
+}
+
+// ── Convert polygon to SVG path string ───────────────────────────────────────
+function polyToPath(pts, scale) {
+  if (pts.length < 2) return '';
+  let d = `M ${(pts[0][0]*scale).toFixed(2)} ${(pts[0][1]*scale).toFixed(2)}`;
+  for (let i = 1; i < pts.length; i++) {
+    d += ` L ${(pts[i][0]*scale).toFixed(2)} ${(pts[i][1]*scale).toFixed(2)}`;
+  }
+  return d + ' Z';
+}
+
+// ── Main bake function ────────────────────────────────────────────────────────
+function bake() {
+  const bakeBtn = $('btn-bake');
+  bakeBtn.textContent = 'Baking…';
+  bakeBtn.disabled = true;
+
+  const vb     = mainSvg.getAttribute('viewBox').split(' ').map(Number);
+  const vW     = vb[2];
+  const vH     = vb[3];
+  const svgClone = mainSvg.cloneNode(true);
+  svgClone.setAttribute('width',  vW);
+  svgClone.setAttribute('height', vH);
+  const svgStr  = new XMLSerializer().serializeToString(svgClone);
+  const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url     = URL.createObjectURL(svgBlob);
+
+  const img = new Image();
+  img.onload = () => {
+    const BAKE_W = vW * 2;
+    const BAKE_H = vH * 2;
+    const bkCvs  = document.createElement('canvas');
+    bkCvs.width  = BAKE_W;
+    bkCvs.height = BAKE_H;
+    const ctx    = bkCvs.getContext('2d');
+    ctx.drawImage(img, 0, 0, BAKE_W, BAKE_H);
+    URL.revokeObjectURL(url);
+
+    const px     = ctx.getImageData(0, 0, BAKE_W, BAKE_H);
+    const polys  = marchingSquares(px.data, BAKE_W, BAKE_H, 160);
+    const scale  = vW / BAKE_W;
+    const rdpEps = 1.2;
+
+    const pathParts = polys
+      .map(poly => polyToPath(rdp(poly, rdpEps), scale))
+      .filter(Boolean);
+
+    if (pathParts.length === 0) {
+      bakeBtn.textContent = 'Nothing to bake';
+      bakeBtn.disabled = false;
+      return;
+    }
+
+    const ns   = 'http://www.w3.org/2000/svg';
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d',         pathParts.join(' '));
+    path.setAttribute('fill',      '#0e0e0e');
+    path.setAttribute('fill-rule', 'evenodd');
+
+    circlesGrp.innerHTML = '';
+    circlesGrp.removeAttribute('filter');
+    circlesGrp.appendChild(path);
+
+    bakeBtn.textContent = 'Baked ✓';
+    bakeBtn.classList.add('baked');
+    bakeBtn.disabled = false;
+    bakeBtn._baked = true;
+  };
+
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    bakeBtn.textContent = 'Bake to Vector';
+    bakeBtn.disabled = false;
+  };
+
+  img.src = url;
+}
+
+$('btn-bake').addEventListener('click', bake);
+
+// Reset baked state when any control changes
+function onControlChange() {
+  const btn = $('btn-bake');
+  if (btn._baked) {
+    btn._baked = false;
+    btn.classList.remove('baked');
+    btn.textContent = 'Bake to Vector';
+  }
+}
+
+document.querySelectorAll('input[type="range"], #char-input, #font-select, #c-dotvar').forEach(el => {
+  el.addEventListener('input', onControlChange);
+  el.addEventListener('change', onControlChange);
+});
+
+// ── Event: resize ────────────────────────────────────────────────────────────
+window.addEventListener('resize', sizeSvg);
+
+// ── Zoom + Pan ───────────────────────────────────────────────────────────────
+let zoomLevel = 1;
+let panX = 0, panY = 0;
+let dragging = false, dragX = 0, dragY = 0, panStartX = 0, panStartY = 0;
+
+function applyTransform() {
+  previewWrp.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+  previewWrp.style.transformOrigin = 'center center';
+}
+
+const previewEl = document.querySelector('.preview');
+
+previewEl.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  zoomLevel = Math.max(0.2, Math.min(12, zoomLevel * factor));
+  applyTransform();
+}, { passive: false });
+
+previewEl.addEventListener('mousedown', e => {
+  dragging = true;
+  dragX = e.clientX; dragY = e.clientY;
+  panStartX = panX; panStartY = panY;
+  previewEl.style.cursor = 'grabbing';
+});
+
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  panX = panStartX + (e.clientX - dragX);
+  panY = panStartY + (e.clientY - dragY);
+  applyTransform();
+});
+
+window.addEventListener('mouseup', () => {
+  dragging = false;
+  previewEl.style.cursor = '';
+});
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+sizeSvg();
+render();
+charInput.focus();
+</script>
+</body>
+</html>
