@@ -19,6 +19,7 @@
   --text3:  #71717A;
   --text4:  #52525B;
   --accent: #FACC15;
+  --paper:  #f0ebe1;
 }
 
 body {
@@ -32,7 +33,6 @@ body {
 }
 
 /* ── FLOATING PANEL ── */
-
 .panel {
   position: fixed;
   right: 22px;
@@ -91,7 +91,6 @@ body {
 }
 
 /* ── TABS ── */
-
 .tabs {
   display: flex;
   background: var(--bg);
@@ -117,12 +116,10 @@ body {
 
 .tab.active { background: var(--bg3); color: var(--text); }
 
-/* ── CHAR INPUT ── */
-
+/* ── INPUTS ── */
 .char-row { display: flex; flex-direction: column; gap: 8px; }
 
 #char-input {
-  flex: 1;
   height: 44px;
   background: var(--bg2);
   border: 1px solid var(--bg3);
@@ -159,7 +156,6 @@ body {
 .sel:focus { border-color: #52525B; }
 
 /* ── UPLOAD ── */
-
 .upload-box {
   border: 2px dashed var(--bg3);
   border-radius: 2px;
@@ -170,12 +166,10 @@ body {
 }
 
 .upload-box:hover, .upload-box.over { border-color: var(--accent); background: rgba(250,204,21,.04); }
-
 .upload-box p  { font-size: 12px; color: var(--text2); }
 .upload-box em { font-size: 11px; color: var(--text3); font-style: normal; display: block; margin-top: 3px; word-break: break-all; }
 
 /* ── SECTION + CONTROLS ── */
-
 .sec {
   font-size: 10px;
   font-weight: 600;
@@ -228,7 +222,24 @@ input[type="range"]::-moz-range-thumb {
   cursor: pointer;
 }
 
-/* ── EXPORT BUTTON ── */
+/* ── BUTTONS ── */
+.btn-bake {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid #3F3F46;
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  margin-bottom: 8px;
+}
+
+.btn-bake:hover { background: var(--bg2); }
+.btn-bake.baked { background: var(--bg3); border-color: #52525B; color: #7dba7d; }
 
 .btn-export {
   width: 100%;
@@ -251,44 +262,36 @@ input[type="range"]::-moz-range-thumb {
 .btn-export:hover { background: #FDE047; }
 
 /* ── PREVIEW ── */
-
 .preview {
   position: fixed;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 36px;
   background: #e8e3d8;
   overflow: hidden;
 }
 
-.preview-wrap {
-  line-height: 0;
-}
-
-#main-canvas {
-  display: block;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}
+.preview-wrap { overflow: hidden; line-height: 0; }
+#main-svg { display: block; }
 </style>
 </head>
 <body>
 
-<canvas id="src-canvas" style="display:none"></canvas>
+<canvas id="hidden-canvas" style="display:none"></canvas>
 
 <div class="panel">
   <div class="panel-header">
     <h1>Bitmap Simulator</h1>
-    <p>Pixel & dither effects</p>
+    <p>Square dot grid & bitmap effects</p>
   </div>
 
   <div class="panel-body">
 
     <div class="tabs">
       <div class="tab active" data-mode="char">Character</div>
-      <div class="tab" data-mode="image">Image</div>
+      <div class="tab" data-mode="svg">SVG File</div>
     </div>
 
     <!-- Character mode -->
@@ -307,167 +310,360 @@ input[type="range"]::-moz-range-thumb {
       </div>
     </div>
 
-    <!-- Image mode -->
-    <div id="mode-image" style="display:none">
+    <!-- SVG upload mode -->
+    <div id="mode-svg" style="display:none">
       <div class="upload-box" id="upload-box">
-        <input type="file" id="img-file" accept="image/*" style="display:none">
-        <p>Drop image or click to upload</p>
+        <input type="file" id="svg-file" accept=".svg" style="display:none">
+        <p>Drop SVG or click to upload</p>
         <em id="filename"></em>
       </div>
     </div>
 
     <div class="hr"></div>
-    <div class="sec">Pixel</div>
+    <div class="sec">Grid</div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Pixel Size</label><span class="v" id="v-pixSize">8</span></div>
-      <input type="range" id="c-pixSize" min="2" max="40" value="8">
+      <div class="ctrl-head"><label>Density</label><span class="v" id="v-density">12</span></div>
+      <input type="range" id="c-density" min="4" max="40" value="12">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Square Size</label><span class="v" id="v-size">80%</span></div>
+      <input type="range" id="c-size" min="20" max="100" value="80">
     </div>
 
     <div class="hr"></div>
-    <div class="sec">Color</div>
+    <div class="sec">Gradient</div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Mode</label></div>
-      <select id="c-colorMode" class="sel">
-        <option value="1bit">1-Bit B&amp;W</option>
-        <option value="gray4">Grayscale 4</option>
-        <option value="gray16">Grayscale 16</option>
-        <option value="color">Full Color</option>
-      </select>
-    </div>
-
-    <div class="ctrl" id="thresh-row">
-      <div class="ctrl-head"><label>Threshold</label><span class="v" id="v-thresh">50%</span></div>
-      <input type="range" id="c-thresh" min="0" max="100" value="50">
-    </div>
-
-    <div class="hr"></div>
-    <div class="sec">Adjust</div>
-
-    <div class="ctrl">
-      <div class="ctrl-head"><label>Contrast</label><span class="v" id="v-contrast">0</span></div>
-      <input type="range" id="c-contrast" min="-100" max="100" value="0">
-    </div>
-
-    <div class="hr"></div>
-    <div class="sec">Dither</div>
-
-    <div class="ctrl">
-      <div class="ctrl-head"><label>Algorithm</label></div>
-      <select id="c-dither" class="sel">
+      <div class="ctrl-head"><label>Direction</label></div>
+      <select id="c-gradDir" class="sel">
         <option value="none">None</option>
-        <option value="fs">Floyd-Steinberg</option>
-        <option value="bayer2">Bayer 2×2</option>
-        <option value="bayer4">Bayer 4×4</option>
-        <option value="bayer8">Bayer 8×8</option>
+        <option value="lr">Left → Right</option>
+        <option value="rl">Right → Left</option>
+        <option value="tb">Top → Bottom</option>
+        <option value="bt">Bottom → Top</option>
+        <option value="diag1">Diagonal ↘</option>
+        <option value="diag2">Diagonal ↗</option>
       </select>
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Strength</label><span class="v" id="v-gradStr">60%</span></div>
+      <input type="range" id="c-gradStr" min="0" max="100" value="60">
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Wave</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Amount</label><span class="v" id="v-waveAmt">0%</span></div>
+      <input type="range" id="c-waveAmt" min="0" max="100" value="0">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Frequency</label><span class="v" id="v-waveFreq">2</span></div>
+      <input type="range" id="c-waveFreq" min="1" max="12" value="2" step="0.5">
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Sampling</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Sensitivity</label><span class="v" id="v-sens">40</span></div>
+      <input type="range" id="c-sens" min="5" max="92" value="40">
     </div>
 
   </div>
 
   <div class="panel-footer">
-    <button class="btn-export" id="btn-export">
-      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-        <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1 9.5v1a1 1 0 001 1h9a1 1 0 001-1v-1" stroke="#000" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      Export PNG
-    </button>
+    <button class="btn-bake" id="btn-bake">Bake to Vector</button>
+    <button class="btn-export" id="btn-export">Export SVG</button>
   </div>
 </div>
 
-<div class="preview" id="preview-area">
+<div class="preview">
   <div class="preview-wrap" id="preview-wrap">
-    <canvas id="main-canvas"></canvas>
+    <svg id="main-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+      <defs>
+        <pattern id="grid-pat" patternUnits="userSpaceOnUse" width="50" height="50">
+          <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(0,0,0,0.11)" stroke-width="0.4"/>
+        </pattern>
+      </defs>
+      <rect width="500" height="500" fill="#e8e3d8"/>
+      <rect width="500" height="500" fill="url(#grid-pat)"/>
+      <g id="squares-grp"></g>
+    </svg>
   </div>
 </div>
 
 <script>
 'use strict';
 
-// ── Bayer matrices, normalized to -0.5..0.5 ──────────────────────────────────
-const BAYER = {
-  2: [[0,2],[3,1]].map(r => r.map(v => v/4 - 0.5)),
-  4: [
-    [ 0, 8, 2,10],[12, 4,14, 6],
-    [ 3,11, 1, 9],[15, 7,13, 5],
-  ].map(r => r.map(v => v/16 - 0.5)),
-  8: [
-    [ 0,32, 8,40, 2,34,10,42],[48,16,56,24,50,18,58,26],
-    [12,44, 4,36,14,46, 6,38],[60,28,52,20,62,30,54,22],
-    [ 3,35,11,43, 1,33, 9,41],[51,19,59,27,49,17,57,25],
-    [15,47, 7,39,13,45, 5,37],[63,31,55,23,61,29,53,21],
-  ].map(r => r.map(v => v/64 - 0.5)),
-};
+const SZ     = 500;
+const CSCALE = 3;
 
-// ── State ────────────────────────────────────────────────────────────────────
-let inputMode  = 'char';
-let srcPixels  = null;   // ImageData from source
+// ── Measure character aspect ratio ────────────────────────────────────────────
+function computeDimensions(text, font) {
+  if (!text) return { W: SZ, H: SZ };
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = `900 1000px ${font}`;
+  const m   = ctx.measureText(text);
+  const tw  = m.width;
+  const th  = (m.actualBoundingBoxAscent || 720) + (m.actualBoundingBoxDescent || 120);
+  const asp = tw / Math.max(th, 1);
+  return { W: Math.round(SZ * Math.max(0.4, asp) * 1.15), H: SZ };
+}
 
-// ── DOM ──────────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
+let mode       = 'char';
+let uploadedPx = null;
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const srcCvs    = $('src-canvas');
-const mainCvs   = $('main-canvas');
+const mainSvg    = $('main-svg');
+const squaresGrp = $('squares-grp');
+const gridPat    = $('grid-pat');
+const hiddenCvs  = $('hidden-canvas');
 const previewWrp = $('preview-wrap');
 const charInput  = $('char-input');
 const fontSel    = $('font-select');
 
-// ── Get control value ─────────────────────────────────────────────────────────
 function val(id) { return parseFloat($(id).value); }
 
-// ── Source: render character ──────────────────────────────────────────────────
-const SZ = 500;
-function renderChar() {
-  const char = charInput.value || '?';
-  const font = fontSel.value;
-
-  const tmp = document.createElement('canvas').getContext('2d');
-  tmp.font = `900 1000px ${font}`;
-  const m  = tmp.measureText(char);
-  const tw = m.width;
-  const th = (m.actualBoundingBoxAscent || 720) + (m.actualBoundingBoxDescent || 120);
-  const aspect = tw / Math.max(th, 1);
-  const W = Math.round(SZ * Math.max(0.4, aspect) * 1.15) * 2;
-  const H = SZ * 2;
-
-  srcCvs.width  = W;
-  srcCvs.height = H;
-  const ctx = srcCvs.getContext('2d');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#000';
-
-  let fs = H * 0.88;
-  ctx.font = `900 ${fs}px ${font}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  const m2  = ctx.measureText(char);
-  const tw2 = m2.width;
-  const th2 = (m2.actualBoundingBoxAscent || fs*0.72) + (m2.actualBoundingBoxDescent || fs*0.12);
-  const s   = Math.min((W * 0.88) / Math.max(tw2,1), (H * 0.88) / Math.max(th2,1));
-  if (s < 1) { fs *= s; ctx.font = `900 ${fs}px ${font}`; }
-
-  const m3 = ctx.measureText(char);
-  const midOff = ((m3.actualBoundingBoxAscent||0) - (m3.actualBoundingBoxDescent||0)) / 2;
-  ctx.fillText(char, W/2, H/2 - midOff * 0.1);
-
-  srcPixels = ctx.getImageData(0, 0, W, H);
-  scheduleRender();
+// ── Size SVG to fit preview ───────────────────────────────────────────────────
+function sizeSvg() {
+  const vb  = (mainSvg.getAttribute('viewBox') || `0 0 ${SZ} ${SZ}`).split(' ').map(Number);
+  const asp = (vb[2] || SZ) / (vb[3] || SZ);
+  const availW = previewWrp.parentElement.clientWidth  - 72;
+  const availH = previewWrp.parentElement.clientHeight - 72;
+  let pw, ph;
+  if (availW / availH > asp) {
+    ph = Math.max(200, Math.min(availH, 600)); pw = Math.round(ph * asp);
+  } else {
+    pw = Math.max(200, Math.min(availW, 1400)); ph = Math.round(pw / asp);
+  }
+  mainSvg.setAttribute('width',  pw);
+  mainSvg.setAttribute('height', ph);
 }
 
-// ── Source: load image ────────────────────────────────────────────────────────
-function loadImage(file) {
+// ── Rectangular dot grid ──────────────────────────────────────────────────────
+function rectGrid(density, W, H) {
+  const cs   = H / density;
+  const cols = Math.ceil(W / cs) + 2;
+  const rows = Math.ceil(H / cs) + 2;
+  const pts  = [];
+  for (let r = -1; r < rows; r++)
+    for (let c = -1; c < cols; c++)
+      pts.push([ c * cs + cs / 2, r * cs + cs / 2 ]);
+  return { pts, cs };
+}
+
+// ── Render character to hidden canvas ─────────────────────────────────────────
+function renderChar(char, font, W, H) {
+  const cW = W * CSCALE, cH = H * CSCALE;
+  hiddenCvs.width = cW; hiddenCvs.height = cH;
+  const ctx = hiddenCvs.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cW, cH);
+  ctx.fillStyle = '#000';
+  let fs = cH * 0.88;
+  ctx.font = `900 ${fs}px ${font}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const m  = ctx.measureText(char);
+  const tw = m.width;
+  const th = (m.actualBoundingBoxAscent || fs*0.72) + (m.actualBoundingBoxDescent || fs*0.12);
+  const s  = Math.min((cW*0.88)/Math.max(tw,1), (cH*0.88)/Math.max(th,1));
+  if (s < 1) { fs *= s; ctx.font = `900 ${fs}px ${font}`; }
+  const m2 = ctx.measureText(char);
+  const midOff = ((m2.actualBoundingBoxAscent||0) - (m2.actualBoundingBoxDescent||0)) / 2;
+  ctx.fillText(char, cW/2, cH/2 - midOff*0.1);
+  return ctx.getImageData(0, 0, cW, cH);
+}
+
+// ── Sample pixel darkness at a point (box average) ────────────────────────────
+function sample(px, cx, cy, r) {
+  const step = Math.max(1, r / 5);
+  let dark = 0, total = 0;
+  for (let dx = -r; dx <= r; dx += step) {
+    for (let dy = -r; dy <= r; dy += step) {
+      if (dx*dx + dy*dy > r*r) continue;
+      const x = Math.round(cx + dx), y = Math.round(cy + dy);
+      const sz = hiddenCvs.width;
+      if (x < 0 || x >= sz || y < 0 || y >= hiddenCvs.height) { total++; continue; }
+      const i = (y * sz + x) * 4;
+      const lum = (px.data[i] + px.data[i+1] + px.data[i+2]) / 3;
+      if (lum < 128) dark++;
+      total++;
+    }
+  }
+  return total > 0 ? dark / total : 0;
+}
+
+// ── Gradient modifier — controls size progression across image ────────────────
+function gradientMod(nx, ny, dir, strength) {
+  if (dir === 'none' || strength === 0) return 1;
+  let t;
+  switch (dir) {
+    case 'lr':    t = nx;                    break;
+    case 'rl':    t = 1 - nx;               break;
+    case 'tb':    t = ny;                    break;
+    case 'bt':    t = 1 - ny;               break;
+    case 'diag1': t = (nx + ny) / 2;        break;
+    case 'diag2': t = (nx + (1-ny)) / 2;    break;
+    default:      return 1;
+  }
+  t = Math.max(0, Math.min(1, t));
+  return (1 - strength) + strength * t;
+}
+
+// ── Update grid paper background ──────────────────────────────────────────────
+function updateGridBg(cs) {
+  gridPat.setAttribute('width',  cs);
+  gridPat.setAttribute('height', cs);
+  gridPat.querySelector('path').setAttribute('d', `M ${cs} 0 L 0 0 0 ${cs}`);
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+let pending = false;
+function scheduleRender() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; render(); });
+}
+
+function render() {
+  const density  = Math.round(val('c-density'));
+  const sizePct  = val('c-size')    / 100;
+  const sens     = val('c-sens')    / 100;
+  const gradDir  = $('c-gradDir').value;
+  const gradStr  = val('c-gradStr') / 100;
+  const waveAmt  = val('c-waveAmt') / 100;
+  const waveFreq = val('c-waveFreq');
+
+  let px, W, H;
+
+  if (mode === 'char') {
+    const ch = charInput.value || '?';
+    ({ W, H } = computeDimensions(ch, fontSel.value));
+    px = renderChar(ch, fontSel.value, W, H);
+  } else if (mode === 'svg' && uploadedPx) {
+    W  = Math.round(uploadedPx.width  / CSCALE);
+    H  = Math.round(uploadedPx.height / CSCALE);
+    px = uploadedPx;
+  } else {
+    squaresGrp.innerHTML = '';
+    return;
+  }
+
+  // Sync SVG viewBox + bg rects
+  mainSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const bgRects = mainSvg.querySelectorAll('rect');
+  bgRects[0].setAttribute('width', W); bgRects[0].setAttribute('height', H);
+  bgRects[1].setAttribute('width', W); bgRects[1].setAttribute('height', H);
+
+  const { pts, cs } = rectGrid(density, W, H);
+  const maxR      = cs * sizePct / 2;  // max half-size of a square
+  const sampleR   = cs * CSCALE * 0.44;
+
+  updateGridBg(cs);
+
+  const ns   = 'http://www.w3.org/2000/svg';
+  const frag = document.createDocumentFragment();
+
+  pts.forEach(([cx, cy]) => {
+    // Darkness sample
+    const cvx = cx * CSCALE, cvy = cy * CSCALE;
+    const cov = sample(px, cvx, cvy, sampleR);
+    if (cov < sens) return;
+
+    // Gradient modifier (position-based size control)
+    const nx  = Math.max(0, Math.min(1, cx / W));
+    const ny  = Math.max(0, Math.min(1, cy / H));
+    const gm  = gradientMod(nx, ny, gradDir, gradStr);
+
+    // Wave modifier (sinusoidal size pulse)
+    const wm  = waveAmt > 0
+      ? 1 + waveAmt * 0.6 * Math.sin(nx * waveFreq * Math.PI * 2)
+      : 1;
+
+    // Final half-size
+    const halfSize = Math.max(0.2, maxR * cov * gm * Math.max(0.05, wm));
+
+    const el = document.createElementNS(ns, 'rect');
+    el.setAttribute('x',      (cx - halfSize).toFixed(2));
+    el.setAttribute('y',      (cy - halfSize).toFixed(2));
+    el.setAttribute('width',  (halfSize * 2).toFixed(2));
+    el.setAttribute('height', (halfSize * 2).toFixed(2));
+    el.setAttribute('fill',   '#0e0e0e');
+    frag.appendChild(el);
+  });
+
+  squaresGrp.innerHTML = '';
+  squaresGrp.appendChild(frag);
+  sizeSvg();
+}
+
+// ── Event: tabs ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    mode = tab.dataset.mode;
+    $('mode-char').style.display = mode === 'char' ? '' : 'none';
+    $('mode-svg').style.display  = mode === 'svg'  ? '' : 'none';
+    scheduleRender();
+  });
+});
+
+// ── Event: char ───────────────────────────────────────────────────────────────
+charInput.addEventListener('input', scheduleRender);
+fontSel.addEventListener('change',  scheduleRender);
+
+// ── Event: controls ───────────────────────────────────────────────────────────
+const ctrls = [
+  ['c-density',  'v-density',  v => v|0        ],
+  ['c-size',     'v-size',     v => `${v|0}%`  ],
+  ['c-gradStr',  'v-gradStr',  v => `${v|0}%`  ],
+  ['c-waveAmt',  'v-waveAmt',  v => `${v|0}%`  ],
+  ['c-waveFreq', 'v-waveFreq', v => parseFloat(v).toFixed(1)],
+  ['c-sens',     'v-sens',     v => v|0        ],
+];
+
+ctrls.forEach(([id, vid, fmt]) => {
+  $(id).addEventListener('input', () => {
+    $(vid).textContent = fmt($(id).value);
+    scheduleRender();
+  });
+});
+
+$('c-gradDir').addEventListener('change', scheduleRender);
+
+// ── Event: SVG upload ─────────────────────────────────────────────────────────
+const uploadBox = $('upload-box');
+const svgFile   = $('svg-file');
+uploadBox.addEventListener('click', () => svgFile.click());
+uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('over'); });
+uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('over'));
+uploadBox.addEventListener('drop', e => {
+  e.preventDefault(); uploadBox.classList.remove('over');
+  if (e.dataTransfer.files[0]) loadSVG(e.dataTransfer.files[0]);
+});
+svgFile.addEventListener('change', () => { if (svgFile.files[0]) loadSVG(svgFile.files[0]); });
+
+function loadSVG(file) {
   $('filename').textContent = file.name;
   const reader = new FileReader();
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      srcCvs.width  = img.width;
-      srcCvs.height = img.height;
-      const ctx = srcCvs.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      srcPixels = ctx.getImageData(0, 0, img.width, img.height);
+      const sz = SZ * CSCALE;
+      hiddenCvs.width = hiddenCvs.height = sz;
+      const ctx = hiddenCvs.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, sz, sz);
+      const s = Math.min(sz / img.width, sz / img.height) * 0.84;
+      const w = img.width * s, h = img.height * s;
+      ctx.drawImage(img, (sz-w)/2, (sz-h)/2, w, h);
+      uploadedPx = ctx.getImageData(0, 0, sz, sz);
       scheduleRender();
     };
     img.src = e.target.result;
@@ -475,212 +671,127 @@ function loadImage(file) {
   reader.readAsDataURL(file);
 }
 
-// ── Quantize a single channel value (0-255) ───────────────────────────────────
-function quantize(v, colorMode, thresh) {
-  if (colorMode === '1bit')  return v >= thresh ? 255 : 0;
-  if (colorMode === 'gray4') return Math.round(Math.min(v,255) / 85) * 85;
-  if (colorMode === 'gray16') return Math.round(Math.min(v,255) / 17) * 17;
-  return Math.round(Math.min(v,255) / 32) * 32; // color: 8 levels
-}
-
-function getSpread(colorMode) {
-  if (colorMode === '1bit')   return 128;
-  if (colorMode === 'gray4')  return 85;
-  if (colorMode === 'gray16') return 17;
-  return 32;
-}
-
-// ── Apply contrast to 0-255 value ────────────────────────────────────────────
-function applyContrast(v, contrast) {
-  if (contrast === 0) return v;
-  const f = (259 * (contrast + 255)) / (255 * (259 - contrast));
-  return Math.max(0, Math.min(255, f * (v - 128) + 128));
-}
-
-// ── Main render ──────────────────────────────────────────────────────────────
-let pending = false;
-function scheduleRender() {
-  if (pending) return;
-  pending = true;
-  requestAnimationFrame(() => { pending = false; doRender(); });
-}
-
-function doRender() {
-  if (!srcPixels) return;
-
-  const pixSize   = Math.max(1, val('c-pixSize') | 0);
-  const colorMode = $('c-colorMode').value;
-  const thresh    = (val('c-thresh') / 100) * 255;
-  const contrast  = val('c-contrast');
-  const dither    = $('c-dither').value;
-  const isColor   = colorMode === 'color';
-
-  const sW = srcPixels.width;
-  const sH = srcPixels.height;
-  const src = srcPixels.data;
-
-  const cols = Math.max(1, Math.ceil(sW / pixSize));
-  const rows = Math.max(1, Math.ceil(sH / pixSize));
-
-  // Sample source into float buffer
-  const ch    = isColor ? 3 : 1;
-  const buf   = new Float32Array(cols * rows * ch);
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const x0 = c * pixSize, y0 = r * pixSize;
-      const x1 = Math.min(x0 + pixSize, sW);
-      const y1 = Math.min(y0 + pixSize, sH);
-      let R=0, G=0, B=0, n=0;
-      for (let y = y0; y < y1; y++) {
-        for (let x = x0; x < x1; x++) {
-          const i = (y * sW + x) * 4;
-          R += src[i]; G += src[i+1]; B += src[i+2]; n++;
-        }
-      }
-      R /= n; G /= n; B /= n;
-      if (contrast !== 0) { R = applyContrast(R, contrast); G = applyContrast(G, contrast); B = applyContrast(B, contrast); }
-      const gray = 0.299*R + 0.587*G + 0.114*B;
-      const idx  = r * cols + c;
-      if (isColor) { buf[idx*3]=R; buf[idx*3+1]=G; buf[idx*3+2]=B; }
-      else         { buf[idx] = gray; }
-    }
-  }
-
-  // Dithering
-  const spread = getSpread(colorMode);
-
-  if (dither === 'fs') {
-    // Floyd-Steinberg error diffusion
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        for (let k = 0; k < ch; k++) {
-          const idx = isColor ? (r*cols+c)*3+k : r*cols+c;
-          const old = buf[idx];
-          const q   = quantize(old, colorMode, thresh);
-          buf[idx]  = q;
-          const err = old - q;
-          const addErr = (dr, dc) => {
-            const nr = r+dr, nc = c+dc;
-            if (nr<0||nr>=rows||nc<0||nc>=cols) return;
-            const ni = isColor ? (nr*cols+nc)*3+k : nr*cols+nc;
-            buf[ni] = Math.max(0, Math.min(255, buf[ni] + err));
-          };
-          const d = (dr,dc,w) => { const nr=r+dr,nc=c+dc; if(nr<0||nr>=rows||nc<0||nc>=cols) return; const ni=isColor?(nr*cols+nc)*3+k:nr*cols+nc; buf[ni]=Math.max(0,Math.min(255,buf[ni]+err*w)); };
-          d(0, 1, 7/16); d(1,-1, 3/16); d(1, 0, 5/16); d(1, 1, 1/16);
-        }
-      }
-    }
-  } else if (dither.startsWith('bayer')) {
-    const n    = parseInt(dither.replace('bayer',''));
-    const bmat = BAYER[n];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const offset = bmat[r % n][c % n] * spread;
-        for (let k = 0; k < ch; k++) {
-          const idx = isColor ? (r*cols+c)*3+k : r*cols+c;
-          buf[idx] = quantize(Math.max(0, Math.min(255, buf[idx] + offset)), colorMode, thresh);
-        }
-      }
-    }
-  } else {
-    // No dither — straight quantize
-    for (let i = 0; i < cols*rows; i++) {
-      for (let k = 0; k < ch; k++) {
-        const idx = isColor ? i*3+k : i;
-        buf[idx] = quantize(buf[idx], colorMode, thresh);
-      }
-    }
-  }
-
-  // Draw to main canvas at low-res; CSS scaling makes pixels visible
-  mainCvs.width  = cols;
-  mainCvs.height = rows;
-  const ctx     = mainCvs.getContext('2d');
-  const imgData = ctx.createImageData(cols, rows);
-  for (let i = 0; i < cols*rows; i++) {
-    let R, G, B;
-    if (isColor) { R=buf[i*3]; G=buf[i*3+1]; B=buf[i*3+2]; }
-    else         { R=G=B=buf[i]; }
-    imgData.data[i*4]   = R;
-    imgData.data[i*4+1] = G;
-    imgData.data[i*4+2] = B;
-    imgData.data[i*4+3] = 255;
-  }
-  ctx.putImageData(imgData, 0, 0);
-
-  sizeCanvas();
-}
-
-// ── Fit canvas in preview area ────────────────────────────────────────────────
-function sizeCanvas() {
-  if (!mainCvs.width || !mainCvs.height) return;
-  const preview = document.getElementById('preview-area');
-  const availW  = preview.clientWidth  - 80;
-  const availH  = preview.clientHeight - 80;
-  const aspect  = mainCvs.width / mainCvs.height;
-  let dw, dh;
-  if (availW / availH > aspect) { dh = Math.min(availH, 700); dw = Math.round(dh * aspect); }
-  else                          { dw = Math.min(availW, 700); dh = Math.round(dw / aspect); }
-  mainCvs.style.width  = dw + 'px';
-  mainCvs.style.height = dh + 'px';
-}
-
-// ── Export PNG ────────────────────────────────────────────────────────────────
+// ── Export SVG ────────────────────────────────────────────────────────────────
 $('btn-export').addEventListener('click', () => {
-  if (!mainCvs.width) return;
-  const pixSize = Math.max(1, val('c-pixSize') | 0);
-  const expCvs  = document.createElement('canvas');
-  expCvs.width  = mainCvs.width  * pixSize;
-  expCvs.height = mainCvs.height * pixSize;
-  const ctx = expCvs.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(mainCvs, 0, 0, expCvs.width, expCvs.height);
-  expCvs.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const a   = document.createElement('a');
-    a.href     = url;
-    a.download = `bitmap-${(charInput.value||'export').replace(/\s+/g,'-')}.png`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 'image/png');
+  const clone = mainSvg.cloneNode(true);
+  clone.setAttribute('xmlns',       'http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  const vb = mainSvg.getAttribute('viewBox').split(' ').map(Number);
+  clone.setAttribute('width',  vb[2]);
+  clone.setAttribute('height', vb[3]);
+  const str  = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
+  const blob = new Blob([str], { type: 'image/svg+xml;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `bitmap-${(charInput.value||'export').replace(/\s+/g,'-')}.svg`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 });
 
-// ── Event: tabs ───────────────────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    inputMode = tab.dataset.mode;
-    $('mode-char').style.display  = inputMode === 'char'  ? '' : 'none';
-    $('mode-image').style.display = inputMode === 'image' ? '' : 'none';
-    if (inputMode === 'char') renderChar();
-    else { srcPixels = null; }
+// ── Bake to Vector ────────────────────────────────────────────────────────────
+function rdp(pts, eps) {
+  if (pts.length < 3) return pts;
+  let maxD = 0, maxI = 0;
+  const [x1,y1] = pts[0], [x2,y2] = pts[pts.length-1];
+  const dx = x2-x1, dy = y2-y1, len = Math.hypot(dx,dy);
+  for (let i = 1; i < pts.length-1; i++) {
+    const d = len === 0
+      ? Math.hypot(pts[i][0]-x1, pts[i][1]-y1)
+      : Math.abs(dy*pts[i][0] - dx*pts[i][1] + x2*y1 - y2*x1) / len;
+    if (d > maxD) { maxD = d; maxI = i; }
+  }
+  if (maxD > eps) {
+    return [...rdp(pts.slice(0, maxI+1), eps).slice(0,-1), ...rdp(pts.slice(maxI), eps)];
+  }
+  return [pts[0], pts[pts.length-1]];
+}
+
+function marchingSquares(data, w, h, threshold) {
+  const grid = new Uint8Array(w * h);
+  for (let i = 0; i < w*h; i++) grid[i] = data[i*4] < threshold ? 1 : 0;
+  const E = [
+    [], [[0,0.5],[0.5,1]], [[0.5,1],[1,0.5]], [[0,0.5],[1,0.5]],
+    [[1,0.5],[0.5,0]], [[0,0.5],[0.5,0],[1,0.5],[0.5,1]], [[0.5,0],[0.5,1]], [[0,0.5],[0.5,0]],
+    [[0.5,0],[0,0.5]], [[0.5,0],[0.5,1]], [[0.5,0],[1,0.5],[0.5,1],[0,0.5]], [[0.5,0],[1,0.5]],
+    [[1,0.5],[0,0.5]], [[1,0.5],[0.5,1]], [[0.5,1],[0,0.5]], [],
+  ];
+  const segs = [];
+  for (let y = 0; y < h-1; y++) for (let x = 0; x < w-1; x++) {
+    const edges = E[grid[y*w+x]*8 + grid[y*w+x+1]*4 + grid[(y+1)*w+x+1]*2 + grid[(y+1)*w+x]];
+    for (let i = 0; i < edges.length; i += 2)
+      segs.push(x+edges[i][0], y+edges[i][1], x+edges[i+1][0], y+edges[i+1][1]);
+  }
+  if (!segs.length) return [];
+  const n = segs.length / 4, used = new Uint8Array(n);
+  const ptKey = (x,y) => `${(x*2).toFixed(0)},${(y*2).toFixed(0)}`;
+  const map = new Map();
+  for (let i = 0; i < n; i++) {
+    const k1 = ptKey(segs[i*4], segs[i*4+1]), k2 = ptKey(segs[i*4+2], segs[i*4+3]);
+    if (!map.has(k1)) map.set(k1, []); if (!map.has(k2)) map.set(k2, []);
+    map.get(k1).push(i); map.get(k2).push(i);
+  }
+  const polys = [];
+  for (let s = 0; s < n; s++) {
+    if (used[s]) continue; used[s] = 1;
+    let cx = segs[s*4+2], cy = segs[s*4+3];
+    const poly = [[segs[s*4], segs[s*4+1]], [cx, cy]];
+    while (true) {
+      const nb = map.get(ptKey(cx, cy)); let found = false;
+      if (nb) for (const ni of nb) {
+        if (used[ni]) continue; used[ni] = 1;
+        const ax=segs[ni*4],ay=segs[ni*4+1],bx=segs[ni*4+2],by=segs[ni*4+3];
+        if (Math.abs(ax-cx)<0.01&&Math.abs(ay-cy)<0.01) { cx=bx; cy=by; } else { cx=ax; cy=ay; }
+        poly.push([cx,cy]); found=true; break;
+      }
+      if (!found) break;
+    }
+    if (poly.length > 6) polys.push(poly);
+  }
+  return polys;
+}
+
+function polyToPath(pts, scale) {
+  if (pts.length < 2) return '';
+  let d = `M ${(pts[0][0]*scale).toFixed(2)} ${(pts[0][1]*scale).toFixed(2)}`;
+  for (let i = 1; i < pts.length; i++) d += ` L ${(pts[i][0]*scale).toFixed(2)} ${(pts[i][1]*scale).toFixed(2)}`;
+  return d + ' Z';
+}
+
+$('btn-bake').addEventListener('click', () => {
+  const bakeBtn = $('btn-bake');
+  bakeBtn.textContent = 'Baking…'; bakeBtn.disabled = true;
+  const vb = mainSvg.getAttribute('viewBox').split(' ').map(Number);
+  const svgClone = mainSvg.cloneNode(true);
+  svgClone.setAttribute('width', vb[2]); svgClone.setAttribute('height', vb[3]);
+  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svgClone)], { type: 'image/svg+xml;charset=utf-8' }));
+  const img = new Image();
+  img.onload = () => {
+    const bkCvs = document.createElement('canvas');
+    bkCvs.width = vb[2]*2; bkCvs.height = vb[3]*2;
+    const ctx = bkCvs.getContext('2d');
+    ctx.drawImage(img, 0, 0, bkCvs.width, bkCvs.height);
+    URL.revokeObjectURL(url);
+    const px = ctx.getImageData(0, 0, bkCvs.width, bkCvs.height);
+    const polys = marchingSquares(px.data, bkCvs.width, bkCvs.height, 160);
+    const scale = vb[2] / bkCvs.width;
+    const parts = polys.map(p => polyToPath(rdp(p, 1.2), scale)).filter(Boolean);
+    if (!parts.length) { bakeBtn.textContent = 'Nothing to bake'; bakeBtn.disabled = false; return; }
+    const ns = 'http://www.w3.org/2000/svg';
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', parts.join(' ')); path.setAttribute('fill', '#0e0e0e'); path.setAttribute('fill-rule', 'evenodd');
+    squaresGrp.innerHTML = ''; squaresGrp.appendChild(path);
+    bakeBtn.textContent = 'Baked ✓'; bakeBtn.classList.add('baked'); bakeBtn.disabled = false; bakeBtn._baked = true;
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); bakeBtn.textContent = 'Bake to Vector'; bakeBtn.disabled = false; };
+  img.src = url;
+});
+
+document.querySelectorAll('input[type="range"], #char-input, #font-select').forEach(el => {
+  el.addEventListener('input', () => {
+    const btn = $('btn-bake');
+    if (btn._baked) { btn._baked = false; btn.classList.remove('baked'); btn.textContent = 'Bake to Vector'; }
   });
 });
-
-// ── Event: char input ─────────────────────────────────────────────────────────
-charInput.addEventListener('input', renderChar);
-fontSel.addEventListener('change', renderChar);
-
-// ── Event: image upload ───────────────────────────────────────────────────────
-const uploadBox = $('upload-box');
-const imgFile   = $('img-file');
-uploadBox.addEventListener('click', () => imgFile.click());
-uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('over'); });
-uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('over'));
-uploadBox.addEventListener('drop', e => { e.preventDefault(); uploadBox.classList.remove('over'); if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]); });
-imgFile.addEventListener('change', () => { if (imgFile.files[0]) loadImage(imgFile.files[0]); });
-
-// ── Event: sliders & selects ──────────────────────────────────────────────────
-$('c-pixSize').addEventListener('input', () => { $('v-pixSize').textContent = val('c-pixSize')|0; scheduleRender(); });
-$('c-thresh').addEventListener('input',  () => { $('v-thresh').textContent = `${val('c-thresh')|0}%`; scheduleRender(); });
-$('c-contrast').addEventListener('input',() => { $('v-contrast').textContent = val('c-contrast')|0; scheduleRender(); });
-$('c-colorMode').addEventListener('change', () => {
-  $('thresh-row').style.display = $('c-colorMode').value === '1bit' ? '' : 'none';
-  scheduleRender();
-});
-$('c-dither').addEventListener('change', scheduleRender);
 
 // ── Zoom + Pan ────────────────────────────────────────────────────────────────
 let zoomLevel = 1, panX = 0, panY = 0;
@@ -691,33 +802,27 @@ function applyTransform() {
   previewWrp.style.transformOrigin = 'center center';
 }
 
-const previewEl = document.getElementById('preview-area');
-
+const previewEl = document.querySelector('.preview');
 previewEl.addEventListener('wheel', e => {
   e.preventDefault();
-  zoomLevel = Math.max(0.2, Math.min(16, zoomLevel * (e.deltaY < 0 ? 1.1 : 1/1.1)));
+  zoomLevel = Math.max(0.2, Math.min(12, zoomLevel * (e.deltaY < 0 ? 1.1 : 1/1.1)));
   applyTransform();
 }, { passive: false });
-
 previewEl.addEventListener('mousedown', e => {
   dragging = true; dragX = e.clientX; dragY = e.clientY;
-  panStartX = panX; panStartY = panY;
-  previewEl.style.cursor = 'grabbing';
+  panStartX = panX; panStartY = panY; previewEl.style.cursor = 'grabbing';
 });
 window.addEventListener('mousemove', e => {
   if (!dragging) return;
-  panX = panStartX + (e.clientX - dragX);
-  panY = panStartY + (e.clientY - dragY);
+  panX = panStartX + (e.clientX - dragX); panY = panStartY + (e.clientY - dragY);
   applyTransform();
 });
 window.addEventListener('mouseup', () => { dragging = false; previewEl.style.cursor = ''; });
-
-// ── Resize ────────────────────────────────────────────────────────────────────
-window.addEventListener('resize', sizeCanvas);
+window.addEventListener('resize', sizeSvg);
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-$('thresh-row').style.display = ''; // 1-bit is default
-document.fonts.ready.then(() => renderChar());
+sizeSvg();
+render();
 charInput.focus();
 </script>
 </body>
