@@ -323,13 +323,13 @@ input[type="range"]::-moz-range-thumb {
     <div class="sec">Grid</div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Density</label><span class="v" id="v-density">12</span></div>
-      <input type="range" id="c-density" min="4" max="40" value="12">
+      <div class="ctrl-head"><label>Density</label><span class="v" id="v-density">22</span></div>
+      <input type="range" id="c-density" min="4" max="60" value="22">
     </div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Square Size</label><span class="v" id="v-size">80%</span></div>
-      <input type="range" id="c-size" min="20" max="100" value="80">
+      <div class="ctrl-head"><label>Square Size</label><span class="v" id="v-size">92%</span></div>
+      <input type="range" id="c-size" min="10" max="100" value="92">
     </div>
 
     <div class="hr"></div>
@@ -370,8 +370,8 @@ input[type="range"]::-moz-range-thumb {
     <div class="sec">Sampling</div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Sensitivity</label><span class="v" id="v-sens">40</span></div>
-      <input type="range" id="c-sens" min="5" max="92" value="40">
+      <div class="ctrl-head"><label>Sensitivity</label><span class="v" id="v-sens">12</span></div>
+      <input type="range" id="c-sens" min="2" max="80" value="12">
     </div>
 
   </div>
@@ -480,23 +480,22 @@ function renderChar(char, font, W, H) {
   return ctx.getImageData(0, 0, cW, cH);
 }
 
-// ── Sample pixel darkness at a point (box average) ────────────────────────────
+// ── Sample darkness (0=white, 1=black) over a small radius ───────────────────
 function sample(px, cx, cy, r) {
-  const step = Math.max(1, r / 5);
-  let dark = 0, total = 0;
-  for (let dx = -r; dx <= r; dx += step) {
-    for (let dy = -r; dy <= r; dy += step) {
+  const W = hiddenCvs.width, H = hiddenCvs.height;
+  const step = Math.max(1, Math.floor(r / 3));
+  let total = 0, count = 0;
+  for (let dy = -r; dy <= r; dy += step) {
+    for (let dx = -r; dx <= r; dx += step) {
       if (dx*dx + dy*dy > r*r) continue;
       const x = Math.round(cx + dx), y = Math.round(cy + dy);
-      const sz = hiddenCvs.width;
-      if (x < 0 || x >= sz || y < 0 || y >= hiddenCvs.height) { total++; continue; }
-      const i = (y * sz + x) * 4;
-      const lum = (px.data[i] + px.data[i+1] + px.data[i+2]) / 3;
-      if (lum < 128) dark++;
-      total++;
+      if (x < 0 || x >= W || y < 0 || y >= H) continue;
+      const i = (y * W + x) * 4;
+      total += 1 - (px.data[i] + px.data[i+1] + px.data[i+2]) / (3 * 255);
+      count++;
     }
   }
-  return total > 0 ? dark / total : 0;
+  return count > 0 ? total / count : 0;
 }
 
 // ── Gradient modifier — controls size progression across image ────────────────
@@ -562,8 +561,8 @@ function render() {
   bgRects[1].setAttribute('width', W); bgRects[1].setAttribute('height', H);
 
   const { pts, cs } = rectGrid(density, W, H);
-  const maxR      = cs * sizePct / 2;  // max half-size of a square
-  const sampleR   = cs * CSCALE * 0.44;
+  const maxR      = cs * sizePct / 2;
+  const sampleR   = Math.max(1, cs * CSCALE * 0.15); // small radius = sharp, accurate reading
 
   updateGridBg(cs);
 
@@ -586,8 +585,8 @@ function render() {
       ? 1 + waveAmt * 0.6 * Math.sin(nx * waveFreq * Math.PI * 2)
       : 1;
 
-    // Final half-size
-    const halfSize = Math.max(0.2, maxR * cov * gm * Math.max(0.05, wm));
+    // Final half-size — minimum 0.5 so tiny edge dots stay visible
+    const halfSize = Math.max(0.5, maxR * cov * gm * Math.max(0.05, wm));
 
     const el = document.createElementNS(ns, 'rect');
     el.setAttribute('x',      (cx - halfSize).toFixed(2));
