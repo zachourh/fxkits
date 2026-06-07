@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<title>Bitmap Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:     #09090B;
+  --bg2:    #18181B;
+  --bg3:    #27272A;
+  --border: rgba(39,39,42,0.6);
+  --text:   #F4F4F5;
+  --text2:  #A1A1AA;
+  --text3:  #71717A;
+  --text4:  #52525B;
+  --accent: #FACC15;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 13px;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── FLOATING PANEL ── */
+
+.panel {
+  position: fixed;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 220px;
+  max-height: 90vh;
+  background: rgba(9,9,11,0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.panel-header h1 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.panel-header p {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 3px;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+.panel-footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── TABS ── */
+
+.tabs {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text3);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+}
+
+.tab.active { background: var(--bg3); color: var(--text); }
+
+/* ── CHAR INPUT ── */
+
+.char-row { display: flex; flex-direction: column; gap: 8px; }
+
+#char-input {
+  flex: 1;
+  height: 44px;
+  background: var(--bg2);
+  border: 1px solid var(--bg3);
+  border-radius: 2px;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+  caret-color: var(--text);
+  padding: 0 8px;
+}
+
+#char-input:focus { border-color: #52525B; }
+
+.sel {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--bg3);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  padding: 7px 30px 7px 10px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2371717A'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.sel:focus { border-color: #52525B; }
+
+/* ── UPLOAD ── */
+
+.upload-box {
+  border: 2px dashed var(--bg3);
+  border-radius: 2px;
+  padding: 16px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.upload-box:hover, .upload-box.over { border-color: var(--accent); background: rgba(250,204,21,.04); }
+
+.upload-box p  { font-size: 12px; color: var(--text2); }
+.upload-box em { font-size: 11px; color: var(--text3); font-style: normal; display: block; margin-top: 3px; word-break: break-all; }
+
+/* ── SECTION + CONTROLS ── */
+
+.sec {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text4);
+  margin-bottom: -6px;
+}
+
+.hr { height: 1px; background: var(--border); }
+
+.ctrl { display: flex; flex-direction: column; gap: 7px; }
+
+.ctrl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.ctrl-head label { font-size: 13px; color: var(--text2); font-weight: 500; }
+.ctrl-head .v    { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg3);
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 16px;
+  border-radius: 2px;
+  background: #D4D4D8;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover { background: #fff; }
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px; height: 16px;
+  border-radius: 2px;
+  background: #D4D4D8;
+  border: none;
+  cursor: pointer;
+}
+
+/* ── EXPORT BUTTON ── */
+
+.btn-export {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-export:hover { background: #FDE047; }
+
+/* ── PREVIEW ── */
+
+.preview {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #e8e3d8;
+  overflow: hidden;
+}
+
+.preview-wrap {
+  line-height: 0;
+}
+
+#main-canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+</style>
+</head>
+<body>
+
+<canvas id="src-canvas" style="display:none"></canvas>
+
+<div class="panel">
+  <div class="panel-header">
+    <h1>Bitmap Simulator</h1>
+    <p>Pixel & dither effects</p>
+  </div>
+
+  <div class="panel-body">
+
+    <div class="tabs">
+      <div class="tab active" data-mode="char">Character</div>
+      <div class="tab" data-mode="image">Image</div>
+    </div>
+
+    <!-- Character mode -->
+    <div id="mode-char">
+      <div class="char-row">
+        <input type="text" id="char-input" maxlength="20" value="A"
+               spellcheck="false" autocomplete="off" autocorrect="off">
+        <select id="font-select" class="sel">
+          <option value="'Arial Black','Helvetica Neue',sans-serif">Arial Black</option>
+          <option value="Impact,Haettenschweiler,sans-serif">Impact</option>
+          <option value="'Trebuchet MS',sans-serif">Trebuchet</option>
+          <option value="Georgia,serif">Georgia</option>
+          <option value="'Courier New',monospace">Courier</option>
+          <option value="'Times New Roman',serif">Times</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Image mode -->
+    <div id="mode-image" style="display:none">
+      <div class="upload-box" id="upload-box">
+        <input type="file" id="img-file" accept="image/*" style="display:none">
+        <p>Drop image or click to upload</p>
+        <em id="filename"></em>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Pixel</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Pixel Size</label><span class="v" id="v-pixSize">8</span></div>
+      <input type="range" id="c-pixSize" min="2" max="40" value="8">
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Color</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Mode</label></div>
+      <select id="c-colorMode" class="sel">
+        <option value="1bit">1-Bit B&amp;W</option>
+        <option value="gray4">Grayscale 4</option>
+        <option value="gray16">Grayscale 16</option>
+        <option value="color">Full Color</option>
+      </select>
+    </div>
+
+    <div class="ctrl" id="thresh-row">
+      <div class="ctrl-head"><label>Threshold</label><span class="v" id="v-thresh">50%</span></div>
+      <input type="range" id="c-thresh" min="0" max="100" value="50">
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Adjust</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Contrast</label><span class="v" id="v-contrast">0</span></div>
+      <input type="range" id="c-contrast" min="-100" max="100" value="0">
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Dither</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Algorithm</label></div>
+      <select id="c-dither" class="sel">
+        <option value="none">None</option>
+        <option value="fs">Floyd-Steinberg</option>
+        <option value="bayer2">Bayer 2×2</option>
+        <option value="bayer4">Bayer 4×4</option>
+        <option value="bayer8">Bayer 8×8</option>
+      </select>
+    </div>
+
+  </div>
+
+  <div class="panel-footer">
+    <button class="btn-export" id="btn-export">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1 9.5v1a1 1 0 001 1h9a1 1 0 001-1v-1" stroke="#000" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Export PNG
+    </button>
+  </div>
+</div>
+
+<div class="preview" id="preview-area">
+  <div class="preview-wrap" id="preview-wrap">
+    <canvas id="main-canvas"></canvas>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Bayer matrices, normalized to -0.5..0.5 ──────────────────────────────────
+const BAYER = {
+  2: [[0,2],[3,1]].map(r => r.map(v => v/4 - 0.5)),
+  4: [
+    [ 0, 8, 2,10],[12, 4,14, 6],
+    [ 3,11, 1, 9],[15, 7,13, 5],
+  ].map(r => r.map(v => v/16 - 0.5)),
+  8: [
+    [ 0,32, 8,40, 2,34,10,42],[48,16,56,24,50,18,58,26],
+    [12,44, 4,36,14,46, 6,38],[60,28,52,20,62,30,54,22],
+    [ 3,35,11,43, 1,33, 9,41],[51,19,59,27,49,17,57,25],
+    [15,47, 7,39,13,45, 5,37],[63,31,55,23,61,29,53,21],
+  ].map(r => r.map(v => v/64 - 0.5)),
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let inputMode  = 'char';
+let srcPixels  = null;   // ImageData from source
+
+// ── DOM ──────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const srcCvs    = $('src-canvas');
+const mainCvs   = $('main-canvas');
+const previewWrp = $('preview-wrap');
+const charInput  = $('char-input');
+const fontSel    = $('font-select');
+
+// ── Get control value ─────────────────────────────────────────────────────────
+function val(id) { return parseFloat($(id).value); }
+
+// ── Source: render character ──────────────────────────────────────────────────
+const SZ = 500;
+function renderChar() {
+  const char = charInput.value || '?';
+  const font = fontSel.value;
+
+  const tmp = document.createElement('canvas').getContext('2d');
+  tmp.font = `900 1000px ${font}`;
+  const m  = tmp.measureText(char);
+  const tw = m.width;
+  const th = (m.actualBoundingBoxAscent || 720) + (m.actualBoundingBoxDescent || 120);
+  const aspect = tw / Math.max(th, 1);
+  const W = Math.round(SZ * Math.max(0.4, aspect) * 1.15) * 2;
+  const H = SZ * 2;
+
+  srcCvs.width  = W;
+  srcCvs.height = H;
+  const ctx = srcCvs.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#000';
+
+  let fs = H * 0.88;
+  ctx.font = `900 ${fs}px ${font}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const m2  = ctx.measureText(char);
+  const tw2 = m2.width;
+  const th2 = (m2.actualBoundingBoxAscent || fs*0.72) + (m2.actualBoundingBoxDescent || fs*0.12);
+  const s   = Math.min((W * 0.88) / Math.max(tw2,1), (H * 0.88) / Math.max(th2,1));
+  if (s < 1) { fs *= s; ctx.font = `900 ${fs}px ${font}`; }
+
+  const m3 = ctx.measureText(char);
+  const midOff = ((m3.actualBoundingBoxAscent||0) - (m3.actualBoundingBoxDescent||0)) / 2;
+  ctx.fillText(char, W/2, H/2 - midOff * 0.1);
+
+  srcPixels = ctx.getImageData(0, 0, W, H);
+  scheduleRender();
+}
+
+// ── Source: load image ────────────────────────────────────────────────────────
+function loadImage(file) {
+  $('filename').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      srcCvs.width  = img.width;
+      srcCvs.height = img.height;
+      const ctx = srcCvs.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      srcPixels = ctx.getImageData(0, 0, img.width, img.height);
+      scheduleRender();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Quantize a single channel value (0-255) ───────────────────────────────────
+function quantize(v, colorMode, thresh) {
+  if (colorMode === '1bit')  return v >= thresh ? 255 : 0;
+  if (colorMode === 'gray4') return Math.round(Math.min(v,255) / 85) * 85;
+  if (colorMode === 'gray16') return Math.round(Math.min(v,255) / 17) * 17;
+  return Math.round(Math.min(v,255) / 32) * 32; // color: 8 levels
+}
+
+function getSpread(colorMode) {
+  if (colorMode === '1bit')   return 128;
+  if (colorMode === 'gray4')  return 85;
+  if (colorMode === 'gray16') return 17;
+  return 32;
+}
+
+// ── Apply contrast to 0-255 value ────────────────────────────────────────────
+function applyContrast(v, contrast) {
+  if (contrast === 0) return v;
+  const f = (259 * (contrast + 255)) / (255 * (259 - contrast));
+  return Math.max(0, Math.min(255, f * (v - 128) + 128));
+}
+
+// ── Main render ──────────────────────────────────────────────────────────────
+let pending = false;
+function scheduleRender() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; doRender(); });
+}
+
+function doRender() {
+  if (!srcPixels) return;
+
+  const pixSize   = Math.max(1, val('c-pixSize') | 0);
+  const colorMode = $('c-colorMode').value;
+  const thresh    = (val('c-thresh') / 100) * 255;
+  const contrast  = val('c-contrast');
+  const dither    = $('c-dither').value;
+  const isColor   = colorMode === 'color';
+
+  const sW = srcPixels.width;
+  const sH = srcPixels.height;
+  const src = srcPixels.data;
+
+  const cols = Math.max(1, Math.ceil(sW / pixSize));
+  const rows = Math.max(1, Math.ceil(sH / pixSize));
+
+  // Sample source into float buffer
+  const ch    = isColor ? 3 : 1;
+  const buf   = new Float32Array(cols * rows * ch);
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x0 = c * pixSize, y0 = r * pixSize;
+      const x1 = Math.min(x0 + pixSize, sW);
+      const y1 = Math.min(y0 + pixSize, sH);
+      let R=0, G=0, B=0, n=0;
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          const i = (y * sW + x) * 4;
+          R += src[i]; G += src[i+1]; B += src[i+2]; n++;
+        }
+      }
+      R /= n; G /= n; B /= n;
+      if (contrast !== 0) { R = applyContrast(R, contrast); G = applyContrast(G, contrast); B = applyContrast(B, contrast); }
+      const gray = 0.299*R + 0.587*G + 0.114*B;
+      const idx  = r * cols + c;
+      if (isColor) { buf[idx*3]=R; buf[idx*3+1]=G; buf[idx*3+2]=B; }
+      else         { buf[idx] = gray; }
+    }
+  }
+
+  // Dithering
+  const spread = getSpread(colorMode);
+
+  if (dither === 'fs') {
+    // Floyd-Steinberg error diffusion
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        for (let k = 0; k < ch; k++) {
+          const idx = isColor ? (r*cols+c)*3+k : r*cols+c;
+          const old = buf[idx];
+          const q   = quantize(old, colorMode, thresh);
+          buf[idx]  = q;
+          const err = old - q;
+          const addErr = (dr, dc) => {
+            const nr = r+dr, nc = c+dc;
+            if (nr<0||nr>=rows||nc<0||nc>=cols) return;
+            const ni = isColor ? (nr*cols+nc)*3+k : nr*cols+nc;
+            buf[ni] = Math.max(0, Math.min(255, buf[ni] + err));
+          };
+          const d = (dr,dc,w) => { const nr=r+dr,nc=c+dc; if(nr<0||nr>=rows||nc<0||nc>=cols) return; const ni=isColor?(nr*cols+nc)*3+k:nr*cols+nc; buf[ni]=Math.max(0,Math.min(255,buf[ni]+err*w)); };
+          d(0, 1, 7/16); d(1,-1, 3/16); d(1, 0, 5/16); d(1, 1, 1/16);
+        }
+      }
+    }
+  } else if (dither.startsWith('bayer')) {
+    const n    = parseInt(dither.replace('bayer',''));
+    const bmat = BAYER[n];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const offset = bmat[r % n][c % n] * spread;
+        for (let k = 0; k < ch; k++) {
+          const idx = isColor ? (r*cols+c)*3+k : r*cols+c;
+          buf[idx] = quantize(Math.max(0, Math.min(255, buf[idx] + offset)), colorMode, thresh);
+        }
+      }
+    }
+  } else {
+    // No dither — straight quantize
+    for (let i = 0; i < cols*rows; i++) {
+      for (let k = 0; k < ch; k++) {
+        const idx = isColor ? i*3+k : i;
+        buf[idx] = quantize(buf[idx], colorMode, thresh);
+      }
+    }
+  }
+
+  // Draw to main canvas at low-res; CSS scaling makes pixels visible
+  mainCvs.width  = cols;
+  mainCvs.height = rows;
+  const ctx     = mainCvs.getContext('2d');
+  const imgData = ctx.createImageData(cols, rows);
+  for (let i = 0; i < cols*rows; i++) {
+    let R, G, B;
+    if (isColor) { R=buf[i*3]; G=buf[i*3+1]; B=buf[i*3+2]; }
+    else         { R=G=B=buf[i]; }
+    imgData.data[i*4]   = R;
+    imgData.data[i*4+1] = G;
+    imgData.data[i*4+2] = B;
+    imgData.data[i*4+3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  sizeCanvas();
+}
+
+// ── Fit canvas in preview area ────────────────────────────────────────────────
+function sizeCanvas() {
+  if (!mainCvs.width || !mainCvs.height) return;
+  const preview = document.getElementById('preview-area');
+  const availW  = preview.clientWidth  - 80;
+  const availH  = preview.clientHeight - 80;
+  const aspect  = mainCvs.width / mainCvs.height;
+  let dw, dh;
+  if (availW / availH > aspect) { dh = Math.min(availH, 700); dw = Math.round(dh * aspect); }
+  else                          { dw = Math.min(availW, 700); dh = Math.round(dw / aspect); }
+  mainCvs.style.width  = dw + 'px';
+  mainCvs.style.height = dh + 'px';
+}
+
+// ── Export PNG ────────────────────────────────────────────────────────────────
+$('btn-export').addEventListener('click', () => {
+  if (!mainCvs.width) return;
+  const pixSize = Math.max(1, val('c-pixSize') | 0);
+  const expCvs  = document.createElement('canvas');
+  expCvs.width  = mainCvs.width  * pixSize;
+  expCvs.height = mainCvs.height * pixSize;
+  const ctx = expCvs.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(mainCvs, 0, 0, expCvs.width, expCvs.height);
+  expCvs.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = `bitmap-${(charInput.value||'export').replace(/\s+/g,'-')}.png`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+});
+
+// ── Event: tabs ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    inputMode = tab.dataset.mode;
+    $('mode-char').style.display  = inputMode === 'char'  ? '' : 'none';
+    $('mode-image').style.display = inputMode === 'image' ? '' : 'none';
+    if (inputMode === 'char') renderChar();
+    else { srcPixels = null; }
+  });
+});
+
+// ── Event: char input ─────────────────────────────────────────────────────────
+charInput.addEventListener('input', renderChar);
+fontSel.addEventListener('change', renderChar);
+
+// ── Event: image upload ───────────────────────────────────────────────────────
+const uploadBox = $('upload-box');
+const imgFile   = $('img-file');
+uploadBox.addEventListener('click', () => imgFile.click());
+uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('over'); });
+uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('over'));
+uploadBox.addEventListener('drop', e => { e.preventDefault(); uploadBox.classList.remove('over'); if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]); });
+imgFile.addEventListener('change', () => { if (imgFile.files[0]) loadImage(imgFile.files[0]); });
+
+// ── Event: sliders & selects ──────────────────────────────────────────────────
+$('c-pixSize').addEventListener('input', () => { $('v-pixSize').textContent = val('c-pixSize')|0; scheduleRender(); });
+$('c-thresh').addEventListener('input',  () => { $('v-thresh').textContent = `${val('c-thresh')|0}%`; scheduleRender(); });
+$('c-contrast').addEventListener('input',() => { $('v-contrast').textContent = val('c-contrast')|0; scheduleRender(); });
+$('c-colorMode').addEventListener('change', () => {
+  $('thresh-row').style.display = $('c-colorMode').value === '1bit' ? '' : 'none';
+  scheduleRender();
+});
+$('c-dither').addEventListener('change', scheduleRender);
+
+// ── Zoom + Pan ────────────────────────────────────────────────────────────────
+let zoomLevel = 1, panX = 0, panY = 0;
+let dragging = false, dragX = 0, dragY = 0, panStartX = 0, panStartY = 0;
+
+function applyTransform() {
+  previewWrp.style.transform = `translate(${panX}px,${panY}px) scale(${zoomLevel})`;
+  previewWrp.style.transformOrigin = 'center center';
+}
+
+const previewEl = document.getElementById('preview-area');
+
+previewEl.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoomLevel = Math.max(0.2, Math.min(16, zoomLevel * (e.deltaY < 0 ? 1.1 : 1/1.1)));
+  applyTransform();
+}, { passive: false });
+
+previewEl.addEventListener('mousedown', e => {
+  dragging = true; dragX = e.clientX; dragY = e.clientY;
+  panStartX = panX; panStartY = panY;
+  previewEl.style.cursor = 'grabbing';
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  panX = panStartX + (e.clientX - dragX);
+  panY = panStartY + (e.clientY - dragY);
+  applyTransform();
+});
+window.addEventListener('mouseup', () => { dragging = false; previewEl.style.cursor = ''; });
+
+// ── Resize ────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', sizeCanvas);
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+$('thresh-row').style.display = ''; // 1-bit is default
+document.fonts.ready.then(() => renderChar());
+charInput.focus();
+</script>
+</body>
+</html>
