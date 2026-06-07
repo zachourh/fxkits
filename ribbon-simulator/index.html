@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<title>Ribbon Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:     #09090B;
+  --bg2:    #18181B;
+  --bg3:    #27272A;
+  --border: rgba(39,39,42,0.6);
+  --text:   #F4F4F5;
+  --text2:  #A1A1AA;
+  --text3:  #71717A;
+  --text4:  #52525B;
+  --accent: #FACC15;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 13px;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── FLOATING PANEL ── */
+
+.panel {
+  position: fixed;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 220px;
+  max-height: 90vh;
+  background: rgba(9,9,11,0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.panel-header h1 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.panel-header p {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 3px;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+.panel-footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── UPLOAD ── */
+
+.upload-box {
+  border: 2px dashed var(--bg3);
+  border-radius: 2px;
+  padding: 16px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.upload-box:hover, .upload-box.over { border-color: var(--accent); background: rgba(250,204,21,.04); }
+.upload-box p  { font-size: 12px; color: var(--text2); }
+.upload-box em { font-size: 11px; color: var(--text3); font-style: normal; display: block; margin-top: 3px; word-break: break-all; }
+
+/* ── SECTION + CONTROLS ── */
+
+.sec {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text4);
+  margin-bottom: -6px;
+}
+
+.hr { height: 1px; background: var(--border); }
+
+.ctrl { display: flex; flex-direction: column; gap: 7px; }
+
+.ctrl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.ctrl-head label { font-size: 13px; color: var(--text2); font-weight: 500; }
+.ctrl-head .v    { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg3);
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 16px;
+  border-radius: 2px;
+  background: #D4D4D8;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover { background: #fff; }
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px; height: 16px;
+  border-radius: 2px;
+  background: #D4D4D8;
+  border: none;
+  cursor: pointer;
+}
+
+/* ── PHASE ROW WITH ANIMATE BTN ── */
+
+.phase-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.phase-row input[type="range"] { flex: 1; }
+
+.btn-anim {
+  flex-shrink: 0;
+  width: 28px;
+  height: 20px;
+  background: var(--bg2);
+  border: 1px solid var(--bg3);
+  border-radius: 2px;
+  color: var(--text3);
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.btn-anim:hover { border-color: var(--text3); color: var(--text2); }
+.btn-anim.active { border-color: var(--accent); color: var(--accent); background: rgba(250,204,21,.08); }
+
+/* ── BACKGROUND SELECTOR ── */
+
+.bg-row {
+  display: flex;
+  gap: 6px;
+}
+
+.bg-swatch {
+  flex: 1;
+  height: 24px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.1s;
+}
+
+.bg-swatch.active { border-color: var(--accent); }
+
+/* ── ORIENTATION TOGGLE ── */
+
+.orient-row {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.orient-btn {
+  flex: 1;
+  text-align: center;
+  padding: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text3);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+}
+
+.orient-btn.active { background: var(--bg3); color: var(--text); }
+
+/* ── BUTTONS ── */
+
+.btn-export {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-export:hover { background: #FDE047; }
+.btn-export:disabled { opacity: 0.4; cursor: not-allowed; background: var(--accent); }
+
+/* ── PREVIEW ── */
+
+.preview {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #09090B;
+}
+
+#main-canvas {
+  display: block;
+  image-rendering: pixelated;
+  transform-origin: center center;
+}
+
+/* ── DROP OVERLAY ── */
+
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9,9,11,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.drop-overlay.visible { opacity: 1; pointer-events: all; }
+
+.drop-overlay .drop-icon { font-size: 48px; }
+.drop-overlay p { font-size: 15px; color: var(--text2); }
+
+/* ── PLACEHOLDER ── */
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.placeholder-icon { font-size: 40px; opacity: 0.15; }
+.placeholder p { font-size: 13px; color: var(--text4); }
+</style>
+</head>
+<body>
+
+<canvas id="main-canvas"></canvas>
+
+<div class="placeholder" id="placeholder">
+  <div class="placeholder-icon">◫</div>
+  <p>Upload an image to begin</p>
+</div>
+
+<div class="drop-overlay" id="drop-overlay">
+  <div class="drop-icon">⬇</div>
+  <p>Drop image to load</p>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h1>Ribbon Simulator</h1>
+    <p>Wave-slice displacement effect</p>
+  </div>
+
+  <div class="panel-body">
+
+    <!-- Upload -->
+    <div class="upload-box" id="upload-box">
+      <input type="file" id="img-file" accept="image/*" style="display:none">
+      <p>Drop image or click to upload</p>
+      <em id="filename"></em>
+    </div>
+
+    <!-- Orientation -->
+    <div class="orient-row">
+      <div class="orient-btn active" data-orient="vertical">Vertical</div>
+      <div class="orient-btn" data-orient="horizontal">Horizontal</div>
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Ribbon</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Strip Width</label><span class="v" id="v-strip">3px</span></div>
+      <input type="range" id="c-strip" min="1" max="24" value="3" step="1">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Frequency</label><span class="v" id="v-freq">3.0</span></div>
+      <input type="range" id="c-freq" min="0.5" max="12" value="3" step="0.5">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Amplitude</label><span class="v" id="v-amp">80px</span></div>
+      <input type="range" id="c-amp" min="0" max="400" value="80" step="2">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Phase</label><span class="v" id="v-phase">0°</span></div>
+      <div class="phase-row">
+        <input type="range" id="c-phase" min="0" max="360" value="0" step="1">
+        <button class="btn-anim" id="btn-anim" title="Animate">▶</button>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+    <div class="sec">Look</div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Edge Shadow</label><span class="v" id="v-shadow">40%</span></div>
+      <input type="range" id="c-shadow" min="0" max="100" value="40" step="1">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Contrast</label><span class="v" id="v-contrast">0</span></div>
+      <input type="range" id="c-contrast" min="-60" max="60" value="0" step="1">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head"><label>Background</label></div>
+      <div class="bg-row">
+        <div class="bg-swatch active" data-bg="#09090B" style="background:#09090B;" title="Dark"></div>
+        <div class="bg-swatch" data-bg="#0A1F13" style="background:#0A1F13;" title="Forest"></div>
+        <div class="bg-swatch" data-bg="#1A0A1F" style="background:#1A0A1F;" title="Indigo"></div>
+        <div class="bg-swatch" data-bg="#ffffff" style="background:#ffffff;border:1px solid var(--bg3);" title="White"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel-footer">
+    <button class="btn-export" id="btn-export" disabled>Export PNG</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── State ────────────────────────────────────────────────────────────────────
+let sourceImg   = null;
+let offscreenW  = 0;
+let offscreenH  = 0;
+let offscreen   = null;   // HTMLImageElement
+let orientation = 'vertical';
+let bgColor     = '#09090B';
+let animating   = false;
+let animFrame   = null;
+let zoomLevel   = 1;
+let panX = 0, panY = 0;
+let dragging = false, dragX = 0, dragY = 0, panStartX = 0, panStartY = 0;
+let warpCanvas  = null;   // reusable offscreen canvas for pixel-warp
+
+// ── DOM ──────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+const canvas      = $('main-canvas');
+const ctx         = canvas.getContext('2d', { willReadFrequently: false });
+const placeholder = $('placeholder');
+const dropOverlay = $('drop-overlay');
+const uploadBox   = $('upload-box');
+const imgFile     = $('img-file');
+const filenameEl  = $('filename');
+const btnAnim     = $('btn-anim');
+const btnExport   = $('btn-export');
+
+const controls = {
+  strip:    { el: $('c-strip'),    disp: $('v-strip'),    fmt: v => `${v}px`                          },
+  freq:     { el: $('c-freq'),     disp: $('v-freq'),     fmt: v => parseFloat(v).toFixed(1)          },
+  amp:      { el: $('c-amp'),      disp: $('v-amp'),      fmt: v => `${v}px`                          },
+  phase:    { el: $('c-phase'),    disp: $('v-phase'),    fmt: v => `${v}°`                           },
+  shadow:   { el: $('c-shadow'),   disp: $('v-shadow'),   fmt: v => `${v}%`                           },
+  contrast: { el: $('c-contrast'), disp: $('v-contrast'), fmt: v => (v > 0 ? `+${v}` : v)            },
+};
+
+function val(key) { return parseFloat(controls[key].el.value); }
+
+// ── Canvas sizing ────────────────────────────────────────────────────────────
+function sizeCanvas() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  render();
+}
+
+// ── Image loader ─────────────────────────────────────────────────────────────
+function loadImage(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  filenameEl.textContent = file.name;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    offscreen = img;
+    offscreenW = img.width;
+    offscreenH = img.height;
+    URL.revokeObjectURL(url);
+    placeholder.style.display = 'none';
+    btnExport.disabled = false;
+    render();
+  };
+  img.src = url;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+let pending = false;
+function scheduleRender() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; render(); });
+}
+
+function render() {
+  const cW = canvas.width;
+  const cH = canvas.height;
+
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, cW, cH);
+
+  if (!offscreen) return;
+
+  const availW = cW - 280;
+  const availH = cH - 60;
+  const scale  = Math.min(availW / offscreenW, availH / offscreenH, 1);
+  const dispW  = Math.round(offscreenW * scale);
+  const dispH  = Math.round(offscreenH * scale);
+  const imgX   = Math.round((availW - dispW) / 2 + 10);
+  const imgY   = Math.round((cH - dispH) / 2);
+
+  const contrast = val('contrast');
+  const stripW   = Math.max(1, Math.round(val('strip')));
+  const freq     = val('freq');
+  const amp      = val('amp');
+  const phaseRad = (val('phase') / 360) * Math.PI * 2;
+  const shadow   = val('shadow') / 100;
+
+  ctx.save();
+  ctx.translate(cW / 2, cH / 2);
+  ctx.scale(zoomLevel, zoomLevel);
+  ctx.translate(-cW / 2 + panX, -cH / 2 + panY);
+  ctx.filter = contrast !== 0 ? `contrast(${100 + contrast * 1.5}%)` : 'none';
+
+  // Base layer — fills every pixel, gaps in displaced strips show this
+  ctx.drawImage(offscreen, imgX, imgY, dispW, dispH);
+
+  // Displaced strips drawn on top, clipped to image rect
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(imgX, imgY, dispW, dispH);
+  ctx.clip();
+
+  if (orientation === 'vertical') {
+    const numStrips = Math.ceil(dispW / stripW);
+    for (let i = 0; i < numStrips; i++) {
+      const sx = imgX + i * stripW;
+      const sw = Math.min(stripW, imgX + dispW - sx);
+      if (sw <= 0) continue;
+      const t  = (i + 0.5) / numStrips;
+      const dy = Math.sin(t * freq * Math.PI * 2 + phaseRad) * amp;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(sx, imgY, sw, dispH);
+      ctx.clip();
+      ctx.drawImage(offscreen, imgX, imgY + dy, dispW, dispH);
+      ctx.restore();
+      if (shadow > 0 && sw >= 2) {
+        const edgeW = Math.min(sw, Math.max(1, Math.ceil(sw * 0.55)));
+        const grad  = ctx.createLinearGradient(sx, 0, sx + edgeW, 0);
+        grad.addColorStop(0, `rgba(0,0,0,${(shadow * 0.75).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(sx, imgY, edgeW, dispH);
+      }
+    }
+  } else {
+    const numStrips = Math.ceil(dispH / stripW);
+    for (let i = 0; i < numStrips; i++) {
+      const sy = imgY + i * stripW;
+      const sh = Math.min(stripW, imgY + dispH - sy);
+      if (sh <= 0) continue;
+      const t  = (i + 0.5) / numStrips;
+      const dx = Math.sin(t * freq * Math.PI * 2 + phaseRad) * amp;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(imgX, sy, dispW, sh);
+      ctx.clip();
+      ctx.drawImage(offscreen, imgX + dx, imgY, dispW, dispH);
+      ctx.restore();
+      if (shadow > 0 && sh >= 2) {
+        const edgeH = Math.min(sh, Math.max(1, Math.ceil(sh * 0.55)));
+        const grad  = ctx.createLinearGradient(0, sy, 0, sy + edgeH);
+        grad.addColorStop(0, `rgba(0,0,0,${(shadow * 0.75).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(imgX, sy, dispW, edgeH);
+      }
+    }
+  }
+
+  ctx.restore();
+  ctx.filter = 'none';
+  ctx.restore();
+}
+
+// ── Animation ────────────────────────────────────────────────────────────────
+function animate() {
+  if (!animating) return;
+  const phaseEl = controls.phase.el;
+  let p = parseFloat(phaseEl.value) + 0.8;
+  if (p > 360) p -= 360;
+  phaseEl.value = p;
+  controls.phase.disp.textContent = controls.phase.fmt(Math.round(p));
+  render();
+  animFrame = requestAnimationFrame(animate);
+}
+
+btnAnim.addEventListener('click', () => {
+  animating = !animating;
+  btnAnim.classList.toggle('active', animating);
+  btnAnim.textContent = animating ? '■' : '▶';
+  if (animating) animate();
+  else if (animFrame) cancelAnimationFrame(animFrame);
+});
+
+// ── Sliders ───────────────────────────────────────────────────────────────────
+Object.entries(controls).forEach(([key, { el, disp, fmt }]) => {
+  el.addEventListener('input', () => {
+    disp.textContent = fmt(el.value);
+    if (!animating || key !== 'phase') scheduleRender();
+  });
+});
+
+// ── Orientation ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.orient-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.orient-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    orientation = btn.dataset.orient;
+    scheduleRender();
+  });
+});
+
+// ── Background swatches ───────────────────────────────────────────────────────
+document.querySelectorAll('.bg-swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.bg-swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    bgColor = sw.dataset.bg;
+    scheduleRender();
+  });
+});
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+uploadBox.addEventListener('click', () => imgFile.click());
+imgFile.addEventListener('change', () => { if (imgFile.files[0]) loadImage(imgFile.files[0]); });
+
+uploadBox.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadBox.classList.add('over');
+});
+uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('over'));
+uploadBox.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadBox.classList.remove('over');
+  if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
+});
+
+// ── Global drag-over ─────────────────────────────────────────────────────────
+let dragLeaveTimer;
+document.addEventListener('dragover', e => {
+  e.preventDefault();
+  clearTimeout(dragLeaveTimer);
+  dropOverlay.classList.add('visible');
+});
+document.addEventListener('dragleave', () => {
+  dragLeaveTimer = setTimeout(() => dropOverlay.classList.remove('visible'), 80);
+});
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  dropOverlay.classList.remove('visible');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadImage(file);
+});
+
+// ── Export ────────────────────────────────────────────────────────────────────
+btnExport.addEventListener('click', () => {
+  if (!offscreen) return;
+
+  const eW = offscreenW;
+  const eH = offscreenH;
+
+  // Scale display-px controls to source-px
+  const availW    = canvas.width - 280;
+  const availH    = canvas.height - 60;
+  const dispScale = Math.min(availW / offscreenW, availH / offscreenH, 1);
+  const ampScale  = 1 / dispScale;
+
+  const contrast = val('contrast');
+  const stripW   = Math.max(1, Math.round(val('strip') * ampScale));
+  const freq     = val('freq');
+  const amp      = val('amp') * ampScale;
+  const phaseRad = (val('phase') / 360) * Math.PI * 2;
+  const shadow   = val('shadow') / 100;
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width  = eW;
+  outCanvas.height = eH;
+  const ectx = outCanvas.getContext('2d');
+
+  ectx.filter = contrast !== 0 ? `contrast(${100 + contrast * 1.5}%)` : 'none';
+
+  // Base layer
+  ectx.drawImage(offscreen, 0, 0, eW, eH);
+
+  // Displaced strips
+  ectx.save();
+  ectx.beginPath();
+  ectx.rect(0, 0, eW, eH);
+  ectx.clip();
+
+  if (orientation === 'vertical') {
+    const numStrips = Math.ceil(eW / stripW);
+    for (let i = 0; i < numStrips; i++) {
+      const sx = i * stripW;
+      const sw = Math.min(stripW, eW - sx);
+      if (sw <= 0) continue;
+      const t  = (i + 0.5) / numStrips;
+      const dy = Math.sin(t * freq * Math.PI * 2 + phaseRad) * amp;
+      ectx.save();
+      ectx.beginPath();
+      ectx.rect(sx, 0, sw, eH);
+      ectx.clip();
+      ectx.drawImage(offscreen, 0, dy, eW, eH);
+      ectx.restore();
+      if (shadow > 0 && sw >= 2) {
+        const edgeW = Math.min(sw, Math.max(1, Math.ceil(sw * 0.55)));
+        const grad  = ectx.createLinearGradient(sx, 0, sx + edgeW, 0);
+        grad.addColorStop(0, `rgba(0,0,0,${(shadow * 0.75).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ectx.fillStyle = grad;
+        ectx.fillRect(sx, 0, edgeW, eH);
+      }
+    }
+  } else {
+    const numStrips = Math.ceil(eH / stripW);
+    for (let i = 0; i < numStrips; i++) {
+      const sy = i * stripW;
+      const sh = Math.min(stripW, eH - sy);
+      if (sh <= 0) continue;
+      const t  = (i + 0.5) / numStrips;
+      const dx = Math.sin(t * freq * Math.PI * 2 + phaseRad) * amp;
+      ectx.save();
+      ectx.beginPath();
+      ectx.rect(0, sy, eW, sh);
+      ectx.clip();
+      ectx.drawImage(offscreen, dx, 0, eW, eH);
+      ectx.restore();
+      if (shadow > 0 && sh >= 2) {
+        const edgeH = Math.min(sh, Math.max(1, Math.ceil(sh * 0.55)));
+        const grad  = ectx.createLinearGradient(0, sy, 0, sy + edgeH);
+        grad.addColorStop(0, `rgba(0,0,0,${(shadow * 0.75).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ectx.fillStyle = grad;
+        ectx.fillRect(0, sy, eW, edgeH);
+      }
+    }
+  }
+
+  ectx.restore();
+  ectx.filter = 'none';
+
+  const url = outCanvas.toDataURL('image/png');
+  const a   = document.createElement('a');
+  a.href     = url;
+  a.download = 'ribbon-export.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+});
+
+// ── Zoom + Pan ────────────────────────────────────────────────────────────────
+const previewEl = document.querySelector('.preview');
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  zoomLevel = Math.max(0.2, Math.min(12, zoomLevel * factor));
+  render();
+}, { passive: false });
+
+canvas.addEventListener('mousedown', e => {
+  dragging = true;
+  dragX = e.clientX; dragY = e.clientY;
+  panStartX = panX; panStartY = panY;
+  canvas.style.cursor = 'grabbing';
+});
+
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  panX = panStartX + (e.clientX - dragX);
+  panY = panStartY + (e.clientY - dragY);
+  render();
+});
+
+window.addEventListener('mouseup', () => {
+  dragging = false;
+  canvas.style.cursor = '';
+});
+
+// ── Resize ────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', sizeCanvas);
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+sizeCanvas();
+</script>
+</body>
+</html>

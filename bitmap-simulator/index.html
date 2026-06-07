@@ -19,7 +19,6 @@
   --text3:  #71717A;
   --text4:  #52525B;
   --accent: #FACC15;
-  --paper:  #f0ebe1;
 }
 
 body {
@@ -222,6 +221,51 @@ input[type="range"]::-moz-range-thumb {
   cursor: pointer;
 }
 
+/* ── TOGGLE ROW ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.toggle-row > label:first-child {
+  font-size: 13px;
+  color: var(--text2);
+  font-weight: 500;
+}
+
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--bg3);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  left: 3px; top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+
 /* ── BUTTONS ── */
 .btn-bake {
   width: 100%;
@@ -269,7 +313,7 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   justify-content: center;
   padding: 36px;
-  background: #e8e3d8;
+  background: #111;
   overflow: hidden;
 }
 
@@ -284,14 +328,14 @@ input[type="range"]::-moz-range-thumb {
 <div class="panel">
   <div class="panel-header">
     <h1>Bitmap Simulator</h1>
-    <p>Square dot grid & bitmap effects</p>
+    <p>Square dot grid &amp; bitmap effects</p>
   </div>
 
   <div class="panel-body">
 
     <div class="tabs">
       <div class="tab active" data-mode="char">Character</div>
-      <div class="tab" data-mode="svg">SVG File</div>
+      <div class="tab" data-mode="img">Image</div>
     </div>
 
     <!-- Character mode -->
@@ -310,11 +354,11 @@ input[type="range"]::-moz-range-thumb {
       </div>
     </div>
 
-    <!-- SVG upload mode -->
-    <div id="mode-svg" style="display:none">
+    <!-- Image upload mode -->
+    <div id="mode-img" style="display:none">
       <div class="upload-box" id="upload-box">
-        <input type="file" id="svg-file" accept=".svg" style="display:none">
-        <p>Drop SVG or click to upload</p>
+        <input type="file" id="img-file" accept="image/*" style="display:none">
+        <p>Drop image or click to upload</p>
         <em id="filename"></em>
       </div>
     </div>
@@ -323,8 +367,8 @@ input[type="range"]::-moz-range-thumb {
     <div class="sec">Grid</div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Density</label><span class="v" id="v-density">28</span></div>
-      <input type="range" id="c-density" min="4" max="80" value="28">
+      <div class="ctrl-head"><label>Density</label><span class="v" id="v-density">40</span></div>
+      <input type="range" id="c-density" min="4" max="80" value="40">
     </div>
 
     <div class="ctrl">
@@ -359,11 +403,19 @@ input[type="range"]::-moz-range-thumb {
     </div>
 
     <div class="hr"></div>
-    <div class="sec">Sampling</div>
+    <div class="sec">Output</div>
 
     <div class="ctrl">
-      <div class="ctrl-head"><label>Sensitivity</label><span class="v" id="v-sens">12</span></div>
-      <input type="range" id="c-sens" min="2" max="80" value="12">
+      <div class="ctrl-head"><label>Threshold</label><span class="v" id="v-sens">8</span></div>
+      <input type="range" id="c-sens" min="2" max="80" value="8">
+    </div>
+
+    <div class="toggle-row">
+      <label>Invert (dark bg)</label>
+      <label class="toggle">
+        <input type="checkbox" id="c-invert">
+        <span class="toggle-slider"></span>
+      </label>
     </div>
 
   </div>
@@ -378,16 +430,12 @@ input[type="range"]::-moz-range-thumb {
   <div class="preview-wrap" id="preview-wrap">
     <svg id="main-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
       <defs>
-        <pattern id="grid-pat" patternUnits="userSpaceOnUse" width="50" height="50">
-          <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(0,0,0,0.11)" stroke-width="0.4"/>
-        </pattern>
         <filter id="ink-filter" x="-20%" y="-20%" width="140%" height="140%">
           <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" seed="13" result="noise"/>
           <feDisplacementMap in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"/>
         </filter>
       </defs>
-      <rect width="500" height="500" fill="#e8e3d8"/>
-      <rect width="500" height="500" fill="url(#grid-pat)"/>
+      <rect id="bg-rect" width="500" height="500" fill="#f5f5f5"/>
       <g id="dots-grp"></g>
     </svg>
   </div>
@@ -414,14 +462,16 @@ function computeDimensions(text, font) {
 // ── State ─────────────────────────────────────────────────────────────────────
 let mode       = 'char';
 let uploadedPx = null;
+let uploadedW  = 0;
+let uploadedH  = 0;
 
 // ── DOM ───────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const mainSvg   = $('main-svg');
-const dotsGrp   = $('dots-grp');
-const inkFilter = $('ink-filter');
-const gridPat   = $('grid-pat');
-const hiddenCvs = $('hidden-canvas');
+const mainSvg    = $('main-svg');
+const dotsGrp    = $('dots-grp');
+const bgRect     = $('bg-rect');
+const inkFilter  = $('ink-filter');
+const hiddenCvs  = $('hidden-canvas');
 const previewWrp = $('preview-wrap');
 const charInput  = $('char-input');
 const fontSel    = $('font-select');
@@ -477,7 +527,7 @@ function renderChar(char, font, W, H) {
   return ctx.getImageData(0, 0, cW, cH);
 }
 
-// ── Sample darkness (0=white, 1=black) over a small radius ───────────────────
+// ── Sample darkness (0=white/bright, 1=black/dark) ────────────────────────────
 function sample(px, cx, cy, r) {
   const W = hiddenCvs.width, H = hiddenCvs.height;
   const step = Math.max(1, Math.floor(r / 3));
@@ -495,28 +545,21 @@ function sample(px, cx, cy, r) {
   return count > 0 ? total / count : 0;
 }
 
-// ── Gradient modifier — controls size progression across image ────────────────
+// ── Gradient modifier ─────────────────────────────────────────────────────────
 function gradientMod(nx, ny, dir, strength) {
   if (dir === 'none' || strength === 0) return 1;
   let t;
   switch (dir) {
-    case 'lr':    t = nx;                    break;
-    case 'rl':    t = 1 - nx;               break;
-    case 'tb':    t = ny;                    break;
-    case 'bt':    t = 1 - ny;               break;
-    case 'diag1': t = (nx + ny) / 2;        break;
-    case 'diag2': t = (nx + (1-ny)) / 2;    break;
+    case 'lr':    t = nx;                 break;
+    case 'rl':    t = 1 - nx;            break;
+    case 'tb':    t = ny;                 break;
+    case 'bt':    t = 1 - ny;            break;
+    case 'diag1': t = (nx + ny) / 2;     break;
+    case 'diag2': t = (nx + (1-ny)) / 2; break;
     default:      return 1;
   }
   t = Math.max(0, Math.min(1, t));
   return (1 - strength) + strength * t;
-}
-
-// ── Update grid paper background ──────────────────────────────────────────────
-function updateGridBg(cs) {
-  gridPat.setAttribute('width',  cs);
-  gridPat.setAttribute('height', cs);
-  gridPat.querySelector('path').setAttribute('d', `M ${cs} 0 L 0 0 0 ${cs}`);
 }
 
 // ── Main render ───────────────────────────────────────────────────────────────
@@ -533,6 +576,12 @@ function render() {
   const sens     = val('c-sens')    / 100;
   const gradDir  = $('c-gradDir').value;
   const gradStr  = val('c-gradStr') / 100;
+  const invert   = $('c-invert').checked;
+
+  const bgFill  = invert ? '#000000' : '#f5f5f5';
+  const dotFill = invert ? '#ffffff' : '#0e0e0e';
+
+  bgRect.setAttribute('fill', bgFill);
 
   let px, W, H;
 
@@ -540,52 +589,49 @@ function render() {
     const ch = charInput.value || '?';
     ({ W, H } = computeDimensions(ch, fontSel.value));
     px = renderChar(ch, fontSel.value, W, H);
-  } else if (mode === 'svg' && uploadedPx) {
-    W  = Math.round(uploadedPx.width  / CSCALE);
-    H  = Math.round(uploadedPx.height / CSCALE);
+  } else if (mode === 'img' && uploadedPx) {
+    W  = uploadedW;
+    H  = uploadedH;
     px = uploadedPx;
   } else {
     dotsGrp.innerHTML = '';
     return;
   }
 
-  // Sync SVG viewBox + bg rects
   mainSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const bgRects = mainSvg.querySelectorAll('rect');
-  bgRects[0].setAttribute('width', W); bgRects[0].setAttribute('height', H);
-  bgRects[1].setAttribute('width', W); bgRects[1].setAttribute('height', H);
+  bgRect.setAttribute('width',  W);
+  bgRect.setAttribute('height', H);
 
   const { pts, cs } = rectGrid(density, W, H);
-  const maxR      = cs * sizePct / 2;
-  const sampleR   = Math.max(1, cs * CSCALE * 0.15); // small radius = sharp, accurate reading
-
-  updateGridBg(cs);
+  const maxR    = cs * sizePct / 2;
+  const sampleR = Math.max(1, cs * CSCALE * 0.4);
 
   const ns   = 'http://www.w3.org/2000/svg';
   const frag = document.createDocumentFragment();
 
   pts.forEach(([cx, cy]) => {
-    // Darkness sample
     const cvx = cx * CSCALE, cvy = cy * CSCALE;
     const cov = sample(px, cvx, cvy, sampleR);
-    if (cov < sens) return;
+
+    // normal: signal = darkness (big dot in dark areas)
+    // invert: signal = brightness (big white dot in bright areas)
+    const signal = invert ? (1 - cov) : cov;
+    if (signal < sens) return;
 
     const nx = Math.max(0, Math.min(1, cx / W));
     const ny = Math.max(0, Math.min(1, cy / H));
 
-    // Power curve: strength=0 → linear (cov), strength=1 → cubic (cov³)
-    // Edge pixels (cov≈0.1) become nearly invisible; center stays large
     const power    = 1 + gradStr * 2;
-    const darkMod  = Math.pow(cov, power);
+    const dotMod   = Math.pow(signal, power);
     const gm       = gradientMod(nx, ny, gradDir, gradStr);
+    const halfSize = Math.max(0.25, maxR * dotMod * gm);
 
-    const r = Math.max(0.25, maxR * darkMod * gm);
-
-    const el = document.createElementNS(ns, 'circle');
-    el.setAttribute('cx',   cx.toFixed(2));
-    el.setAttribute('cy',   cy.toFixed(2));
-    el.setAttribute('r',    r.toFixed(2));
-    el.setAttribute('fill', '#0e0e0e');
+    const el = document.createElementNS(ns, 'rect');
+    el.setAttribute('x',      (cx - halfSize).toFixed(2));
+    el.setAttribute('y',      (cy - halfSize).toFixed(2));
+    el.setAttribute('width',  (halfSize * 2).toFixed(2));
+    el.setAttribute('height', (halfSize * 2).toFixed(2));
+    el.setAttribute('fill',   dotFill);
     frag.appendChild(el);
   });
 
@@ -613,7 +659,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     mode = tab.dataset.mode;
     $('mode-char').style.display = mode === 'char' ? '' : 'none';
-    $('mode-svg').style.display  = mode === 'svg'  ? '' : 'none';
+    $('mode-img').style.display  = mode === 'img'  ? '' : 'none';
     scheduleRender();
   });
 });
@@ -623,14 +669,12 @@ charInput.addEventListener('input', scheduleRender);
 fontSel.addEventListener('change',  scheduleRender);
 
 // ── Event: controls ───────────────────────────────────────────────────────────
-const ctrls = [
-  ['c-density', 'v-density', v => v|0       ],
-  ['c-size',    'v-size',    v => `${v|0}%` ],
-  ['c-gradStr', 'v-gradStr', v => `${v|0}%` ],
-  ['c-sens',    'v-sens',    v => v|0       ],
-];
-
-ctrls.forEach(([id, vid, fmt]) => {
+[
+  ['c-density', 'v-density', v => v|0      ],
+  ['c-size',    'v-size',    v => `${v|0}%`],
+  ['c-gradStr', 'v-gradStr', v => `${v|0}%`],
+  ['c-sens',    'v-sens',    v => v|0      ],
+].forEach(([id, vid, fmt]) => {
   $(id).addEventListener('input', () => {
     $(vid).textContent = fmt($(id).value);
     scheduleRender();
@@ -643,33 +687,45 @@ $('c-grunge').addEventListener('input', () => {
 });
 
 $('c-gradDir').addEventListener('change', scheduleRender);
+$('c-invert').addEventListener('change',  scheduleRender);
 
-// ── Event: SVG upload ─────────────────────────────────────────────────────────
+// ── Event: image upload ───────────────────────────────────────────────────────
 const uploadBox = $('upload-box');
-const svgFile   = $('svg-file');
-uploadBox.addEventListener('click', () => svgFile.click());
-uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('over'); });
+const imgFile   = $('img-file');
+uploadBox.addEventListener('click',    () => imgFile.click());
+uploadBox.addEventListener('dragover', e  => { e.preventDefault(); uploadBox.classList.add('over'); });
 uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('over'));
 uploadBox.addEventListener('drop', e => {
   e.preventDefault(); uploadBox.classList.remove('over');
-  if (e.dataTransfer.files[0]) loadSVG(e.dataTransfer.files[0]);
+  if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
 });
-svgFile.addEventListener('change', () => { if (svgFile.files[0]) loadSVG(svgFile.files[0]); });
+imgFile.addEventListener('change', () => { if (imgFile.files[0]) loadImage(imgFile.files[0]); });
 
-function loadSVG(file) {
+function loadImage(file) {
   $('filename').textContent = file.name;
   const reader = new FileReader();
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      const sz = SZ * CSCALE;
-      hiddenCvs.width = hiddenCvs.height = sz;
+      // Preserve aspect ratio, longest side = SZ * CSCALE
+      const aspect = img.width / img.height;
+      let cW, cH;
+      if (aspect >= 1) {
+        cW = SZ * CSCALE;
+        cH = Math.round(SZ * CSCALE / aspect);
+      } else {
+        cH = SZ * CSCALE;
+        cW = Math.round(SZ * CSCALE * aspect);
+      }
+      hiddenCvs.width  = cW;
+      hiddenCvs.height = cH;
       const ctx = hiddenCvs.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, sz, sz);
-      const s = Math.min(sz / img.width, sz / img.height) * 0.84;
-      const w = img.width * s, h = img.height * s;
-      ctx.drawImage(img, (sz-w)/2, (sz-h)/2, w, h);
-      uploadedPx = ctx.getImageData(0, 0, sz, sz);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, cW, cH);
+      ctx.drawImage(img, 0, 0, cW, cH);
+      uploadedPx = ctx.getImageData(0, 0, cW, cH);
+      uploadedW  = Math.round(cW / CSCALE);
+      uploadedH  = Math.round(cH / CSCALE);
       scheduleRender();
     };
     img.src = e.target.result;
@@ -777,14 +833,17 @@ $('btn-bake').addEventListener('click', () => {
     const ctx = bkCvs.getContext('2d');
     ctx.drawImage(img, 0, 0, bkCvs.width, bkCvs.height);
     URL.revokeObjectURL(url);
-    const px = ctx.getImageData(0, 0, bkCvs.width, bkCvs.height);
-    const polys = marchingSquares(px.data, bkCvs.width, bkCvs.height, 160);
+    const pxData = ctx.getImageData(0, 0, bkCvs.width, bkCvs.height);
+    const inv = $('c-invert').checked;
+    const polys = marchingSquares(pxData.data, bkCvs.width, bkCvs.height, inv ? 96 : 160);
     const scale = vb[2] / bkCvs.width;
     const parts = polys.map(p => polyToPath(rdp(p, 1.2), scale)).filter(Boolean);
     if (!parts.length) { bakeBtn.textContent = 'Nothing to bake'; bakeBtn.disabled = false; return; }
     const ns = 'http://www.w3.org/2000/svg';
     const path = document.createElementNS(ns, 'path');
-    path.setAttribute('d', parts.join(' ')); path.setAttribute('fill', '#0e0e0e'); path.setAttribute('fill-rule', 'evenodd');
+    path.setAttribute('d', parts.join(' '));
+    path.setAttribute('fill', inv ? '#ffffff' : '#0e0e0e');
+    path.setAttribute('fill-rule', 'evenodd');
     dotsGrp.innerHTML = ''; dotsGrp.appendChild(path);
     bakeBtn.textContent = 'Baked ✓'; bakeBtn.classList.add('baked'); bakeBtn.disabled = false; bakeBtn._baked = true;
   };

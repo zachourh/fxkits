@@ -106,6 +106,24 @@ body {
   pointer-events: none;
 }
 
+.card-thumb.heatmap-thumb {
+  background:
+    radial-gradient(circle at 58% 26%, #fff 0 3%, transparent 7%),
+    radial-gradient(circle at 55% 34%, #ff1600 0 9%, transparent 17%),
+    radial-gradient(circle at 43% 34%, #fff000 0 6%, transparent 13%),
+    radial-gradient(circle at 61% 48%, #ff6a00 0 10%, transparent 22%),
+    radial-gradient(circle at 48% 55%, #7dff42 0 12%, transparent 25%),
+    radial-gradient(circle at 38% 34%, #00d6ff 0 13%, transparent 25%),
+    linear-gradient(135deg, #120062 0%, #2132d4 42%, #030014 100%);
+}
+
+.card-thumb.fisheye-thumb {
+  background:
+    radial-gradient(circle at center, transparent 0 28%, rgba(255,255,255,0.18) 29%, transparent 31%),
+    radial-gradient(circle at 50% 45%, #f1f1f1 0 14%, #7f8bff 15% 23%, #171727 24% 34%, transparent 35%),
+    radial-gradient(circle at 50% 50%, #f7f7f7 0 18%, #d6d6d6 19% 31%, #20202a 32% 58%, #060609 59% 100%);
+}
+
 .card-info {
   padding: 12px 14px 16px;
   display: flex;
@@ -225,12 +243,23 @@ footer {
     </div>
   </a>
 
-  <a class="card" href="bitmap-simulator/">
-    <div class="card-thumb"></div>
+  <a class="card" href="heatmap-simulator/">
+    <div class="card-thumb heatmap-thumb"></div>
     <div class="card-info">
       <div class="card-text">
-        <div class="card-name">Bitmap Simulator</div>
-        <div class="card-category">Convert any image into a dithered bitmap composition.</div>
+        <div class="card-name">Heatmap Simulator</div>
+        <div class="card-category">Upload an image and remap it into thermal heat colors.</div>
+      </div>
+      <span class="card-btn">Access</span>
+    </div>
+  </a>
+
+  <a class="card" href="fisheye-simulator/">
+    <div class="card-thumb fisheye-thumb"></div>
+    <div class="card-info">
+      <div class="card-text">
+        <div class="card-name">Fisheye Effect</div>
+        <div class="card-category">Warp uploaded images through a wide-angle fisheye lens.</div>
       </div>
       <span class="card-btn">Access</span>
     </div>
