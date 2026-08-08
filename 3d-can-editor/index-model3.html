@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<title>3D Can Editor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #d9d9d6; overflow: hidden; font-family: system-ui, sans-serif; color: #fff; }
+  #app { width: 100vw; height: 100vh; }
+  canvas { display: block; }
+
+  #ui {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(20,20,22,0.58); backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 16px;
+    padding: 13px 22px; z-index: 10;
+  }
+  #toolName {
+    color: #fff; font-size: 17px; font-weight: 700;
+    letter-spacing: 0.08em; width: 210px; white-space: nowrap;
+  }
+  .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.16); flex-shrink: 0; }
+  .mode-label {
+    color: rgba(255,255,255,0.58); font-size: 12px;
+    letter-spacing: 0.04em; padding: 4px 2px; white-space: nowrap;
+  }
+  .upload-spec {
+    color: rgba(255,255,255,0.38); font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+  }
+
+  button {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 8px; color: rgba(255,255,255,0.72); font-size: 11px;
+    letter-spacing: 0.05em; padding: 6px 13px; cursor: pointer; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  button:hover { background: rgba(255,255,255,0.13); color: #fff; }
+  .icon-btn {
+    width: 28px; height: 28px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; line-height: 1;
+  }
+  .export-wrap { position: relative; }
+  #exportBtn::after { content: " v"; color: rgba(255,255,255,0.42); }
+  .export-menu {
+    position: absolute; right: 0; bottom: 40px; width: 230px;
+    display: none; flex-direction: column; gap: 8px;
+    background: rgba(14,14,18,0.92); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
+    padding: 12px; box-shadow: 0 18px 44px rgba(0,0,0,0.35);
+  }
+  .export-wrap.open .export-menu { display: flex; }
+  .export-title {
+    color: rgba(255,255,255,0.38); font-size: 10px;
+    letter-spacing: 0.11em; text-transform: uppercase;
+  }
+  .export-row {
+    display: grid; grid-template-columns: 44px 1fr 1fr 1fr; gap: 6px;
+    align-items: center;
+  }
+  .export-format {
+    color: rgba(255,255,255,0.68); font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .export-option {
+    padding: 7px 6px; text-align: center; font-size: 10px;
+  }
+  .export-option.disabled {
+    opacity: 0.3; cursor: not-allowed; pointer-events: none;
+  }
+  .export-3d {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 10px; font-size: 11px; text-align: left;
+  }
+  .export-3d span { color: rgba(255,255,255,0.42); font-size: 10px; }
+  .export-toggles {
+    display: flex; flex-direction: column; gap: 7px;
+    padding: 2px 0 4px; border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .export-toggle {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    color: rgba(255,255,255,0.56); font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .export-toggle input { width: 14px; height: 14px; accent-color: #fff; cursor: pointer; }
+  #wrapFile { display: none; }
+
+  #panel {
+    position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    background: rgba(10,10,14,0.76); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+    padding: 20px 18px; width: 184px; z-index: 10;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .ctrl-row { display: flex; flex-direction: column; gap: 7px; }
+  .ctrl-label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.34);
+  }
+  .ctrl-label span { color: rgba(255,255,255,0.58); font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 2px;
+    background: rgba(255,255,255,0.15); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    border-radius: 50%; background: #fff; cursor: pointer;
+    box-shadow: 0 0 5px rgba(255,255,255,0.35);
+  }
+  .color-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .color-row input[type="color"] {
+    -webkit-appearance: none; appearance: none;
+    width: 32px; height: 22px; padding: 0;
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 7px;
+    background: transparent; cursor: pointer; overflow: hidden;
+  }
+  .color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .color-row input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 6px; }
+  .model-options { display: flex; flex-direction: column; gap: 5px; }
+  .model-btn {
+    width: 100%; padding: 8px 12px; text-align: left;
+    color: rgba(255,255,255,0.48);
+  }
+  .model-btn.active {
+    border-color: rgba(255,255,255,0.26);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+  #loading {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #d9d9d6; color: rgba(0,0,0,0.32); font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase; z-index: 100; transition: opacity 0.4s;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+  #hint {
+    position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+    color: rgba(0,0,0,0.24); font-size: 10px; letter-spacing: 0.13em;
+    text-transform: uppercase; pointer-events: none; user-select: none;
+  }
+  @media (max-width: 780px) {
+    #panel { width: 164px; right: 12px; }
+    #ui { max-width: calc(100vw - 24px); overflow-x: auto; }
+    #toolName { width: 170px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="loading">Loading Can</div>
+  <div id="hint">Drag to orbit - right drag to pan - scroll to zoom</div>
+
+  <div id="ui">
+    <div id="toolName">3D Can Editor</div>
+    <div class="sep"></div>
+    <div class="mode-label">Full Wrap</div>
+    <div id="uploadSpec" class="upload-spec">1800 x 1200 px</div>
+    <div class="sep"></div>
+    <button id="uploadWrapBtn" type="button">Upload Design</button>
+    <button id="clearWrapBtn" class="icon-btn" type="button" aria-label="Remove design" title="Remove design">X</button>
+    <input type="file" id="wrapFile" accept="image/*">
+    <div class="sep"></div>
+    <button id="resetBtn" type="button">Reset View</button>
+    <div id="exportWrap" class="export-wrap">
+      <button id="exportBtn" type="button" aria-haspopup="true" aria-expanded="false">Export</button>
+      <div id="exportMenu" class="export-menu" role="menu">
+        <div class="export-title">Export Quality</div>
+        <div class="export-toggles">
+          <label class="export-toggle" for="transparentExport">Transparent PNG <input id="transparentExport" type="checkbox"></label>
+          <label class="export-toggle" for="shadowExport">Hide Shadow <input id="shadowExport" type="checkbox"></label>
+        </div>
+        <div class="export-row">
+          <div class="export-format">PNG</div>
+          <button class="export-option" type="button" data-format="png" data-height="720">720P</button>
+          <button class="export-option" type="button" data-format="png" data-height="1080">1080P</button>
+          <button class="export-option disabled" type="button" disabled>4K</button>
+        </div>
+        <div class="export-row">
+          <div class="export-format">JPG</div>
+          <button class="export-option" type="button" data-format="jpg" data-height="720">720P</button>
+          <button class="export-option" type="button" data-format="jpg" data-height="1080">1080P</button>
+          <button class="export-option disabled" type="button" disabled>4K</button>
+        </div>
+        <button id="export3dBtn" class="export-3d" type="button">3D File <span>GLB</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div class="ctrl-row">
+      <div class="ctrl-label">Metal <span id="metalnessVal">1.00</span></div>
+      <input type="range" id="metalness" min="0" max="1" step="0.01" value="1">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Roughness <span id="roughnessVal">0.22</span></div>
+      <input type="range" id="roughness" min="0" max="0.8" step="0.01" value="0.22">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Shine <span id="shineVal">0.23</span></div>
+      <input type="range" id="shine" min="0" max="2.5" step="0.01" value="0.23">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Label Gloss <span id="labelGlossVal">0.45</span></div>
+      <input type="range" id="labelGloss" min="0" max="1" step="0.01" value="0.45">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Tilt <span id="tiltVal">0.00</span></div>
+      <input type="range" id="tilt" min="-0.45" max="0.45" step="0.01" value="0">
+    </div>
+    <div class="color-row">
+      <div class="ctrl-label">Background</div>
+      <input type="color" id="bgColor" value="#d9d9d6" aria-label="Background color">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Can Model</div>
+      <div class="model-options">
+        <button class="model-btn active" type="button" data-model="standard">Standard</button>
+        <button class="model-btn" type="button" data-model="medium">Medium</button>
+        <button class="model-btn" type="button" data-model="tall">Tall</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
+
+const $ = id => document.getElementById(id)
+const app = $('app')
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setSize(innerWidth, innerHeight)
+renderer.outputColorSpace = THREE.SRGBColorSpace
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.toneMappingExposure = 1.05
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFSoftShadowMap
+app.prepend(renderer.domElement)
+
+const scene = new THREE.Scene()
+scene.background = new THREE.Color(0xd9d9d6)
+document.body.style.backgroundColor = '#d9d9d6'
+
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.05, 100)
+camera.position.set(0, 1.0, 7.2)
+
+const controls = new OrbitControls(camera, renderer.domElement)
+controls.enableDamping = true
+controls.dampingFactor = 0.055
+controls.minDistance = 2.2
+controls.maxDistance = 12
+controls.target.set(0, 0, 0)
+
+const root = new THREE.Group()
+scene.add(root)
+
+function buildStudioEnv() {
+  const w = 2048, h = 1024
+  const cv = document.createElement('canvas')
+  cv.width = w; cv.height = h
+  const cx = cv.getContext('2d')
+  cx.fillStyle = '#d5d5d2'
+  cx.fillRect(0, 0, w, h)
+  const grad = cx.createLinearGradient(0, 0, 0, h)
+  grad.addColorStop(0, '#f7f7f2')
+  grad.addColorStop(0.48, '#dcdcd8')
+  grad.addColorStop(1, '#a9aaa6')
+  cx.fillStyle = grad
+  cx.fillRect(0, 0, w, h)
+  const addPanel = (x, y, pw, ph, alpha) => {
+    cx.save()
+    cx.shadowBlur = 150
+    cx.shadowColor = `rgba(255,255,255,${alpha})`
+    cx.fillStyle = `rgba(255,255,255,${alpha})`
+    cx.fillRect(x, y, pw, ph)
+    cx.restore()
+  }
+  addPanel(w * 0.06, h * 0.08, w * 0.22, h * 0.42, 0.95)
+  addPanel(w * 0.73, h * 0.10, w * 0.20, h * 0.38, 0.8)
+  addPanel(w * 0.38, h * 0.02, w * 0.24, h * 0.08, 0.68)
+  cx.fillStyle = 'rgba(20,20,18,0.18)'
+  cx.fillRect(0, h * 0.58, w, h * 0.42)
+  return cv
+}
+
+const pmrem = new THREE.PMREMGenerator(renderer)
+const envTexture = new THREE.CanvasTexture(buildStudioEnv())
+envTexture.mapping = THREE.EquirectangularReflectionMapping
+scene.environment = pmrem.fromEquirectangular(envTexture).texture
+envTexture.dispose()
+pmrem.dispose()
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0xb6b6b0, 1.5)
+scene.add(hemi)
+const key = new THREE.DirectionalLight(0xffffff, 2.6)
+key.position.set(-3, 4.5, 3.5)
+key.castShadow = true
+key.shadow.mapSize.set(2048, 2048)
+scene.add(key)
+const rim = new THREE.DirectionalLight(0xffffff, 1.5)
+rim.position.set(4, 3, -4)
+scene.add(rim)
+
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(18, 18),
+  new THREE.ShadowMaterial({ color: 0x000000, opacity: 0.13 })
+)
+floor.rotation.x = -Math.PI / 2
+floor.position.y = -2.18
+floor.receiveShadow = true
+scene.add(floor)
+
+const canMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xf5f3ec,
+  metalness: 1,
+  roughness: 0.22,
+  envMapIntensity: 0.23,
+  clearcoat: 0.164,
+  clearcoatRoughness: 0.18,
+})
+
+const lidMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xe7e5dc,
+  metalness: 1,
+  roughness: 0.22,
+  envMapIntensity: 0.23,
+  clearcoat: 0.164,
+  clearcoatRoughness: 0.18,
+})
+
+const labelMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff,
+  metalness: 0,
+  roughness: 0.32,
+  envMapIntensity: 0.8,
+  clearcoat: 0.45,
+  clearcoatRoughness: 0.18,
+  side: THREE.FrontSide,
+  depthTest: true,
+  depthWrite: true,
+  polygonOffset: true,
+  polygonOffsetFactor: -2,
+  polygonOffsetUnits: -2,
+})
+
+let canObject = null
+let labelMesh = null
+let canHeight = 4
+let canRadius = 1
+let bodyRadius = 1
+let canCenterY = 0
+const canCenter = new THREE.Vector3()
+let wrapImage = null
+const modelWrapImages = {}
+const defaultWrapCache = {}
+let labelCanvas = null
+let labelTexture = null
+let topAssembly = null
+let labelRadiusProfile = null
+let modelHasUvLabel = false
+let currentModelKey = 'standard'
+let currentLabelWidth = 1800
+let currentLabelHeight = 1200
+let currentLabelBodyRatio = 0.965
+const CAN_MODELS = {
+  standard: {
+    name: 'Standard',
+    url: 'assets/model-3/scene.gltf',
+    width: 1800,
+    height: 1200,
+    bodyRatio: 0.965,
+    uvLabel: true,
+    defaultWrap: 'assets/default-wrap.png',
+  },
+  medium: {
+    name: 'Medium',
+    url: 'assets/model-4/can-medium.glb',
+    width: 1800,
+    height: 1500,
+    bodyRatio: 0.955,
+    uvLabel: false,
+    defaultWrap: 'assets/wraps/medium-can.png',
+  },
+  tall: {
+    name: 'Tall',
+    url: 'assets/model-4/can-tall.glb',
+    width: 1800,
+    height: 2100,
+    bodyRatio: 0.965,
+    uvLabel: false,
+    defaultWrap: 'assets/wraps/tall-can.png',
+  },
+}
+
+function makeDefaultLabelCanvas() {
+  const cv = document.createElement('canvas')
+  cv.width = currentLabelWidth; cv.height = currentLabelHeight
+  const cx = cv.getContext('2d')
+  cx.fillStyle = '#ffffff'
+  cx.fillRect(0, 0, cv.width, cv.height)
+  cx.strokeStyle = 'rgba(0,0,0,0.08)'
+  cx.lineWidth = 2
+  cx.strokeRect(18, 18, cv.width - 36, cv.height - 36)
+  return cv
+}
+
+function drawContain(cx, image, x, y, w, h) {
+  const ratio = Math.min(w / image.width, h / image.height)
+  const dw = image.width * ratio
+  const dh = image.height * ratio
+  cx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh)
+}
+
+function drawCover(cx, image, x, y, w, h) {
+  const ratio = Math.max(w / image.width, h / image.height)
+  const dw = image.width * ratio
+  const dh = image.height * ratio
+  cx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh)
+}
+
+function drawSmartFit(cx, image, x, y, w, h) {
+  const targetAspect = w / h
+  const imageAspect = image.width / image.height
+  const aspectDelta = Math.abs(targetAspect - imageAspect) / targetAspect
+  const draw = aspectDelta > 0.04 ? drawContain : drawCover
+  draw(cx, image, x, y, w, h)
+}
+
+function rebuildLabelTexture() {
+  if (labelCanvas && (labelCanvas.width !== currentLabelWidth || labelCanvas.height !== currentLabelHeight)) {
+    labelCanvas = null
+    if (labelTexture) {
+      labelTexture.dispose()
+      labelTexture = null
+    }
+  }
+  if (!labelCanvas) labelCanvas = makeDefaultLabelCanvas()
+  const cx = labelCanvas.getContext('2d')
+  cx.fillStyle = '#ffffff'
+  cx.fillRect(0, 0, labelCanvas.width, labelCanvas.height)
+
+  if (wrapImage) drawSmartFit(cx, wrapImage, 0, 0, labelCanvas.width, labelCanvas.height)
+
+  if (!labelTexture) {
+    labelTexture = new THREE.CanvasTexture(labelCanvas)
+    labelTexture.colorSpace = THREE.SRGBColorSpace
+    labelTexture.anisotropy = renderer.capabilities.getMaxAnisotropy()
+  }
+  labelMaterial.map = labelTexture
+  canMaterial.map = modelHasUvLabel ? labelTexture : null
+  labelTexture.needsUpdate = true
+  canMaterial.needsUpdate = true
+  labelMaterial.needsUpdate = true
+  if (canObject) updateLabelMesh()
+}
+
+function updateLabelMesh() {
+  if (!canObject) return
+  if (modelHasUvLabel) {
+    if (labelMesh) {
+      root.remove(labelMesh)
+      labelMesh.geometry.dispose()
+      labelMesh = null
+    }
+    return
+  }
+  const labelHeight = canHeight * currentLabelBodyRatio
+  if (labelMesh) {
+    root.remove(labelMesh)
+    labelMesh.geometry.dispose()
+  }
+  const geo = labelRadiusProfile
+    ? createProfiledLabelGeometry(labelHeight)
+    : new THREE.CylinderGeometry(bodyRadius * 1.006, bodyRadius * 1.006, labelHeight, 256, 1, true, Math.PI)
+  labelMesh = new THREE.Mesh(geo, labelMaterial)
+  labelMesh.position.copy(canCenter)
+  labelMesh.castShadow = true
+  labelMesh.receiveShadow = true
+  labelMesh.renderOrder = 8
+  root.add(labelMesh)
+}
+
+function createProfiledLabelGeometry(labelHeight) {
+  const radialSegments = 256
+  const heightSegments = 96
+  const positions = []
+  const normals = []
+  const uvs = []
+  const indices = []
+  const half = labelHeight * 0.5
+
+  for (let yStep = 0; yStep <= heightSegments; yStep++) {
+    const v = yStep / heightSegments
+    const localY = -half + v * labelHeight
+    const radius = sampleLabelRadius(canCenter.y + localY) * 1.008
+
+    for (let xStep = 0; xStep <= radialSegments; xStep++) {
+      const u = xStep / radialSegments
+      const theta = Math.PI + u * Math.PI * 2
+      const x = Math.cos(theta) * radius
+      const z = Math.sin(theta) * radius
+      positions.push(x, localY, z)
+      normals.push(Math.cos(theta), 0, Math.sin(theta))
+      uvs.push(1 - u, v)
+    }
+  }
+
+  const row = radialSegments + 1
+  for (let yStep = 0; yStep < heightSegments; yStep++) {
+    for (let xStep = 0; xStep < radialSegments; xStep++) {
+      const a = yStep * row + xStep
+      const b = a + row
+      indices.push(a, b, a + 1, b, b + 1, a + 1)
+    }
+  }
+
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+  geo.setIndex(indices)
+  return geo
+}
+
+function sampleLabelRadius(y) {
+  if (!labelRadiusProfile) return bodyRadius
+  const { minY, maxY, radii } = labelRadiusProfile
+  const t = THREE.MathUtils.clamp((y - minY) / Math.max(0.0001, maxY - minY), 0, 1)
+  const p = t * (radii.length - 1)
+  const i = Math.floor(p)
+  const f = p - i
+  return THREE.MathUtils.lerp(radii[i], radii[Math.min(i + 1, radii.length - 1)], f)
+}
+
+function addTopPart(group, mesh, y, x = 0, z = 0) {
+  mesh.position.set(x, y, z)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+  group.add(mesh)
+  return mesh
+}
+
+function createPullTabShape(width, height, holeWidth, holeHeight) {
+  const shape = new THREE.Shape()
+  shape.absellipse(0, 0, width * 0.5, height * 0.5, 0, Math.PI * 2)
+  const hole = new THREE.Path()
+  hole.absellipse(0, height * 0.08, holeWidth * 0.5, holeHeight * 0.5, 0, Math.PI * 2)
+  shape.holes.push(hole)
+  return shape
+}
+
+function rebuildCanTop() {
+  if (topAssembly) {
+    root.remove(topAssembly)
+    topAssembly.traverse(child => {
+      if (child.geometry) child.geometry.dispose()
+      if (child.material && child.material !== canMaterial && child.material !== lidMaterial) child.material.dispose()
+    })
+  }
+
+  const group = new THREE.Group()
+  const topY = canCenter.y + canHeight * 0.5 - canHeight * 0.018
+  const r = bodyRadius * 0.92
+  const darkMaterial = new THREE.MeshBasicMaterial({ color: 0x030303 })
+
+  const lid = addTopPart(group, new THREE.Mesh(
+    new THREE.CylinderGeometry(r * 0.91, r * 0.96, 0.055, 256),
+    lidMaterial
+  ), topY)
+
+  const outerRim = new THREE.Mesh(new THREE.TorusGeometry(r * 0.965, r * 0.032, 24, 256), lidMaterial)
+  outerRim.rotation.x = Math.PI / 2
+  addTopPart(group, outerRim, topY + 0.035)
+
+  const innerRim = new THREE.Mesh(new THREE.TorusGeometry(r * 0.78, r * 0.018, 18, 220), lidMaterial)
+  innerRim.rotation.x = Math.PI / 2
+  addTopPart(group, innerRim, topY + 0.052)
+
+  const dishRing = new THREE.Mesh(new THREE.TorusGeometry(r * 0.55, r * 0.014, 16, 180), lidMaterial)
+  dishRing.scale.z = 0.72
+  dishRing.rotation.x = Math.PI / 2
+  dishRing.rotation.z = -0.16
+  addTopPart(group, dishRing, topY + 0.065, -r * 0.08, -r * 0.08)
+
+  const score = new THREE.Mesh(
+    new THREE.CapsuleGeometry(r * 0.075, r * 0.48, 14, 36),
+    darkMaterial
+  )
+  score.rotation.x = Math.PI / 2
+  score.rotation.z = Math.PI / 2
+  score.scale.x = 1.7
+  addTopPart(group, score, topY + 0.071, -r * 0.03, -r * 0.36)
+
+  const tabGeo = new THREE.ExtrudeGeometry(
+    createPullTabShape(r * 0.48, r * 0.92, r * 0.22, r * 0.42),
+    { depth: 0.035, bevelEnabled: true, bevelSegments: 5, bevelSize: 0.012, bevelThickness: 0.012 }
+  )
+  tabGeo.center()
+  const tab = new THREE.Mesh(tabGeo, lidMaterial)
+  tab.rotation.x = -Math.PI / 2
+  tab.rotation.z = -0.18
+  addTopPart(group, tab, topY + 0.105, r * 0.02, r * 0.05)
+
+  const rivet = new THREE.Mesh(
+    new THREE.CylinderGeometry(r * 0.105, r * 0.13, 0.055, 80),
+    lidMaterial
+  )
+  addTopPart(group, rivet, topY + 0.14, r * 0.02, -r * 0.05)
+
+  const embossMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    metalness: 0.8,
+    roughness: 0.5,
+    envMapIntensity: 0.55,
+    transparent: true,
+    opacity: 0.28,
+  })
+  for (let i = 0; i < 12; i++) {
+    const dot = new THREE.Mesh(new THREE.BoxGeometry(r * 0.018, 0.007, r * 0.018), embossMaterial)
+    const col = i % 3
+    const row = Math.floor(i / 3)
+    addTopPart(group, dot, topY + 0.075, r * (0.11 + col * 0.045), r * (-0.50 + row * 0.045))
+  }
+
+  lid.renderOrder = 2
+  group.position.set(canCenter.x, 0, canCenter.z)
+  topAssembly = group
+  root.add(group)
+}
+
+function frameCan(scaledBox, scaledSize) {
+  const radius = Math.max(scaledSize.x, scaledSize.z) * 0.5
+  const distance = Math.max(7.2, canHeight * 1.35, radius * 4.8)
+  floor.position.y = scaledBox.min.y - 0.025
+  controls.target.copy(canCenter)
+  camera.position.set(canCenter.x, canCenter.y + canHeight * 0.08, canCenter.z + distance)
+  controls.update()
+}
+
+function buildLabelRadiusProfile(object, scaledBox) {
+  const segments = 180
+  const bins = Array.from({ length: segments }, () => [])
+  const minY = scaledBox.min.y
+  const maxY = scaledBox.max.y
+  const p = new THREE.Vector3()
+
+  object.updateWorldMatrix(true, true)
+  object.traverse(child => {
+    if (!child.isMesh || !child.geometry?.attributes?.position) return
+    const attr = child.geometry.attributes.position
+    for (let i = 0; i < attr.count; i++) {
+      p.fromBufferAttribute(attr, i)
+      child.localToWorld(p)
+      const t = (p.y - minY) / Math.max(0.0001, maxY - minY)
+      const bin = Math.max(0, Math.min(segments - 1, Math.floor(t * segments)))
+      bins[bin].push(Math.hypot(p.x - canCenter.x, p.z - canCenter.z))
+    }
+  })
+
+  let last = bodyRadius
+  const radii = bins.map(values => {
+    if (!values.length) return last
+    values.sort((a, b) => a - b)
+    last = values[Math.floor(values.length * 0.94)]
+    return last
+  })
+
+  for (let pass = 0; pass < 3; pass++) {
+    for (let i = 1; i < radii.length - 1; i++) {
+      radii[i] = radii[i - 1] * 0.24 + radii[i] * 0.52 + radii[i + 1] * 0.24
+    }
+  }
+
+  return { minY, maxY, radii }
+}
+
+function normalizeCan(object) {
+  const box = new THREE.Box3().setFromObject(object)
+  const size = box.getSize(new THREE.Vector3())
+  const center = box.getCenter(new THREE.Vector3())
+  const scale = 4.4 / size.y
+  object.position.sub(center)
+  object.scale.setScalar(scale)
+  const scaledBox = new THREE.Box3().setFromObject(object)
+  const scaledSize = scaledBox.getSize(new THREE.Vector3())
+  canHeight = scaledSize.y
+  canRadius = Math.max(scaledSize.x, scaledSize.z) * 0.5
+  bodyRadius = canRadius
+  scaledBox.getCenter(canCenter)
+  canCenterY = canCenter.y
+  labelRadiusProfile = modelHasUvLabel ? null : buildLabelRadiusProfile(object, scaledBox)
+  frameCan(scaledBox, scaledSize)
+}
+
+function createFallbackCan() {
+  const group = new THREE.Group()
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(1, 1, 4.1, 192, 1, false),
+    canMaterial
+  )
+  body.castShadow = true
+  body.receiveShadow = true
+  group.add(body)
+
+  const top = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.96, 1.01, 0.16, 192),
+    lidMaterial
+  )
+  top.position.y = 2.08
+  top.castShadow = true
+  top.receiveShadow = true
+  group.add(top)
+
+  const bottom = top.clone()
+  bottom.position.y = -2.08
+  group.add(bottom)
+
+  canObject = group
+  modelHasUvLabel = false
+  root.add(group)
+  canHeight = 4.16
+  canRadius = 1
+  bodyRadius = 1
+  canCenterY = 0
+  canCenter.set(0, 0, 0)
+  labelRadiusProfile = null
+  floor.position.y = -2.18
+  controls.target.set(0, 0, 0)
+  camera.position.set(0, 0.35, 7.2)
+  controls.update()
+  rebuildCanTop()
+  rebuildLabelTexture()
+  updateLabelMesh()
+}
+
+function disposeSceneObject(object) {
+  object.traverse(child => {
+    if (child.geometry) child.geometry.dispose()
+  })
+}
+
+function clearCanScene() {
+  if (canObject) {
+    root.remove(canObject)
+    disposeSceneObject(canObject)
+    canObject = null
+  }
+  if (labelMesh) {
+    root.remove(labelMesh)
+    labelMesh.geometry.dispose()
+    labelMesh = null
+  }
+  if (topAssembly) {
+    root.remove(topAssembly)
+    disposeSceneObject(topAssembly)
+    topAssembly = null
+  }
+  labelRadiusProfile = null
+}
+
+function setActiveModel(modelKey) {
+  currentModelKey = modelKey
+  const model = CAN_MODELS[modelKey]
+  currentLabelWidth = model.width
+  currentLabelHeight = model.height
+  currentLabelBodyRatio = model.bodyRatio
+  $('uploadSpec').textContent = `${model.width} x ${model.height} px`
+  $('wrapFile').value = ''
+  document.querySelectorAll('.model-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.model === modelKey)
+  })
+  applyModelWrap(modelKey)
+}
+
+function loadCan(modelKey = currentModelKey) {
+  const model = CAN_MODELS[modelKey]
+  setActiveModel(modelKey)
+  clearCanScene()
+  $('loading').textContent = 'Loading Can'
+  $('loading').classList.remove('hidden')
+  new GLTFLoader().load(
+    model.url,
+    gltf => {
+      const object = gltf.scene
+      canObject = object
+      modelHasUvLabel = model.uvLabel
+      object.traverse(child => {
+        if (!child.isMesh) return
+        const materialName = child.material?.name?.toLowerCase() || ''
+        const meshName = child.name.toLowerCase()
+        const isLabelPart = materialName.includes('label') || meshName.includes('circle_0')
+        child.material = model.uvLabel && isLabelPart ? labelMaterial : lidMaterial
+        child.castShadow = true
+        child.receiveShadow = true
+        if (!child.geometry.attributes.normal) child.geometry.computeVertexNormals()
+      })
+      normalizeCan(object)
+      root.add(object)
+      rebuildLabelTexture()
+      updateLabelMesh()
+      $('loading').classList.add('hidden')
+    },
+    undefined,
+    error => {
+      console.error(error)
+      $('loading').textContent = 'Using fallback can'
+      modelHasUvLabel = false
+      createFallbackCan()
+      setTimeout(() => $('loading').classList.add('hidden'), 350)
+    }
+  )
+}
+
+function bindSlider(id, valueId, decimals, apply) {
+  const input = $(id)
+  const output = $(valueId)
+  input.addEventListener('input', () => {
+    const v = Number(input.value)
+    output.textContent = v.toFixed(decimals)
+    apply(v)
+  })
+}
+
+bindSlider('metalness', 'metalnessVal', 2, v => {
+  canMaterial.metalness = v
+  lidMaterial.metalness = v
+})
+bindSlider('roughness', 'roughnessVal', 2, v => {
+  canMaterial.roughness = v
+  lidMaterial.roughness = v
+})
+bindSlider('shine', 'shineVal', 2, v => {
+  canMaterial.envMapIntensity = v
+  canMaterial.clearcoat = Math.min(1, v / 1.4)
+  lidMaterial.envMapIntensity = v
+  lidMaterial.clearcoat = Math.min(1, v / 1.4)
+})
+bindSlider('labelGloss', 'labelGlossVal', 2, v => {
+  labelMaterial.clearcoat = v
+  labelMaterial.roughness = 0.58 - v * 0.42
+})
+bindSlider('tilt', 'tiltVal', 2, v => { root.rotation.z = v })
+
+function setSlider(id, value, decimals) {
+  $(id).value = value
+  $(`${id}Val`).textContent = Number(value).toFixed(decimals)
+}
+
+function setSceneBackground(hex) {
+  scene.background.set(hex)
+  document.body.style.backgroundColor = hex
+  $('loading').style.background = hex
+  $('bgColor').value = hex
+}
+
+$('bgColor').addEventListener('input', e => setSceneBackground(e.target.value))
+document.querySelectorAll('.model-btn').forEach(btn => {
+  btn.addEventListener('click', () => loadCan(btn.dataset.model))
+})
+
+function readImage(file, assign) {
+  if (!file) return
+  const img = new Image()
+  img.onload = () => {
+    assign(img)
+    rebuildLabelTexture()
+    updateLabelMesh()
+  }
+  img.src = URL.createObjectURL(file)
+}
+
+function applyModelWrap(modelKey) {
+  const storedWrap = modelWrapImages[modelKey]
+  if (storedWrap !== undefined) {
+    wrapImage = storedWrap
+    rebuildLabelTexture()
+    updateLabelMesh()
+    return
+  }
+  loadDefaultWrap(modelKey)
+}
+
+function loadDefaultWrap(modelKey = currentModelKey) {
+  const model = CAN_MODELS[modelKey]
+  if (defaultWrapCache[modelKey]) {
+    modelWrapImages[modelKey] = defaultWrapCache[modelKey]
+    if (modelKey === currentModelKey) {
+      wrapImage = defaultWrapCache[modelKey]
+      rebuildLabelTexture()
+      updateLabelMesh()
+    }
+    return
+  }
+  const img = new Image()
+  img.onload = () => {
+    defaultWrapCache[modelKey] = img
+    modelWrapImages[modelKey] = img
+    if (modelKey === currentModelKey) {
+      wrapImage = img
+      rebuildLabelTexture()
+      updateLabelMesh()
+    }
+  }
+  img.src = model.defaultWrap
+}
+
+$('uploadWrapBtn').addEventListener('click', () => $('wrapFile').click())
+$('wrapFile').addEventListener('change', e => readImage(e.target.files[0], img => {
+  modelWrapImages[currentModelKey] = img
+  wrapImage = img
+}))
+$('clearWrapBtn').addEventListener('click', () => {
+  modelWrapImages[currentModelKey] = null
+  wrapImage = null
+  $('wrapFile').value = ''
+  rebuildLabelTexture()
+  updateLabelMesh()
+})
+
+$('resetBtn').addEventListener('click', () => {
+  root.rotation.set(0, 0, 0)
+  setSlider('tilt', 0, 2)
+  const distance = Math.max(7.2, canHeight * 1.35, bodyRadius * 4.8)
+  camera.position.set(canCenter.x, canCenter.y + canHeight * 0.08, canCenter.z + distance)
+  controls.target.copy(canCenter)
+  controls.update()
+})
+
+function downloadUrl(url, filename) {
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
+function closeExportMenu() {
+  $('exportWrap').classList.remove('open')
+  $('exportBtn').setAttribute('aria-expanded', 'false')
+}
+
+function exportImage(format, targetHeight) {
+  const originalPixelRatio = renderer.getPixelRatio()
+  const originalSize = renderer.getSize(new THREE.Vector2())
+  const originalBackground = scene.background
+  const originalFloorVisible = floor.visible
+  const aspect = innerWidth / innerHeight
+  const width = Math.round(targetHeight * aspect)
+  const mime = format === 'jpg' ? 'image/jpeg' : 'image/png'
+  const ext = format === 'jpg' ? 'jpg' : 'png'
+  const useTransparentBackground = format === 'png' && $('transparentExport').checked
+
+  if (useTransparentBackground) scene.background = null
+  if ($('shadowExport').checked) floor.visible = false
+  renderer.setPixelRatio(1)
+  renderer.setSize(width, targetHeight, false)
+  renderer.render(scene, camera)
+  downloadUrl(renderer.domElement.toDataURL(mime, 0.92), `3d-can-editor-${targetHeight}p.${ext}`)
+  scene.background = originalBackground
+  floor.visible = originalFloorVisible
+  renderer.setPixelRatio(originalPixelRatio)
+  renderer.setSize(originalSize.x, originalSize.y, false)
+  renderer.render(scene, camera)
+}
+
+function exportGlb() {
+  const exporter = new GLTFExporter()
+  exporter.parse(
+    root,
+    result => {
+      const blob = result instanceof ArrayBuffer
+        ? new Blob([result], { type: 'model/gltf-binary' })
+        : new Blob([JSON.stringify(result)], { type: 'model/gltf+json' })
+      const url = URL.createObjectURL(blob)
+      downloadUrl(url, result instanceof ArrayBuffer ? '3d-can-editor.glb' : '3d-can-editor.gltf')
+      URL.revokeObjectURL(url)
+    },
+    error => console.error(error),
+    { binary: true, embedImages: true, trs: false }
+  )
+}
+
+$('exportBtn').addEventListener('click', event => {
+  event.stopPropagation()
+  const isOpen = $('exportWrap').classList.toggle('open')
+  $('exportBtn').setAttribute('aria-expanded', String(isOpen))
+})
+
+document.querySelectorAll('.export-option[data-format]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    exportImage(btn.dataset.format, Number(btn.dataset.height))
+    closeExportMenu()
+  })
+})
+
+$('export3dBtn').addEventListener('click', () => {
+  exportGlb()
+  closeExportMenu()
+})
+
+document.addEventListener('click', event => {
+  if (!$('exportWrap').contains(event.target)) closeExportMenu()
+})
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(innerWidth, innerHeight)
+})
+
+function animate() {
+  requestAnimationFrame(animate)
+  controls.update()
+  renderer.render(scene, camera)
+}
+
+loadCan()
+animate()
+</script>
+</body>
+</html>

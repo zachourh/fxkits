@@ -139,6 +139,47 @@ body {
     linear-gradient(135deg, #0c3a25 0%, #101010 52%, #632a12 100%);
 }
 
+.card-thumb.glitch-thumb {
+  background:
+    linear-gradient(90deg, transparent 0 12%, #00ffd0 12% 24%, transparent 24% 38%, #ff174d 38% 49%, transparent 49%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.22) 0 1px, transparent 1px 7px),
+    radial-gradient(circle at 50% 38%, #d8d8d8 0 11%, #19191f 12% 24%, transparent 25%),
+    linear-gradient(135deg, #07070a 0%, #1c1c22 52%, #000 100%);
+}
+
+.card-thumb.can-thumb {
+  background:
+    radial-gradient(ellipse at 50% 18%, #ffffff 0 12%, #d8d8d5 13% 19%, transparent 20%),
+    linear-gradient(90deg, transparent 0 29%, rgba(255,255,255,0.7) 30% 37%, transparent 38% 65%, rgba(0,0,0,0.12) 66% 73%, transparent 74%),
+    linear-gradient(180deg, #eeeeeb 0 14%, #ffffff 15% 79%, #c9c9c5 80% 100%),
+    linear-gradient(135deg, #d7d7d3 0%, #f2f2ef 52%, #b8b8b4 100%);
+}
+
+.section-divider {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 48px 0 6px;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: "";
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+  flex: 1;
+}
+
+.section-title {
+  color: #777;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .card-info {
   padding: 12px 14px 16px;
   display: flex;
@@ -292,6 +333,32 @@ footer {
       <div class="card-text">
         <div class="card-name">Ribbon Simulator</div>
         <div class="card-category">Turn an uploaded image into refractive vertical glass ribbons.</div>
+      </div>
+      <span class="card-btn">Access</span>
+    </div>
+  </a>
+
+  <a class="card" href="glitch-simulator/">
+    <div class="card-thumb glitch-thumb"></div>
+    <div class="card-info">
+      <div class="card-text">
+        <div class="card-name">Glitch Simulator</div>
+        <div class="card-category">Upload a video and generate RGB glitch damage variations.</div>
+      </div>
+      <span class="card-btn">Access</span>
+    </div>
+  </a>
+
+  <div class="section-divider">
+    <div class="section-title">Interactive Mockups</div>
+  </div>
+
+  <a class="card" href="3d-can-editor/">
+    <div class="card-thumb can-thumb"></div>
+    <div class="card-info">
+      <div class="card-text">
+        <div class="card-name">3D Can Editor</div>
+        <div class="card-category">Wrap packaging artwork on a studio-lit 3D aluminum can.</div>
       </div>
       <span class="card-btn">Access</span>
     </div>

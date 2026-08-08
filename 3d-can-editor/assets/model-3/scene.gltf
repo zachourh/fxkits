@@ -1,0 +1,279 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 3988,
+      "max": [
+        1.059689998626709,
+        1.059689998626709,
+        3.5946199893951416
+      ],
+      "min": [
+        -1.059689998626709,
+        -1.059689998626709,
+        0.01590999960899353
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 47856,
+      "componentType": 5126,
+      "count": 3988,
+      "max": [
+        0.9999980330467224,
+        0.9999980330467224,
+        0.4908519387245178
+      ],
+      "min": [
+        -0.9999980330467224,
+        -0.9999980330467224,
+        -0.819762110710144
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 3988,
+      "max": [
+        1.0,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 21504,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 95712,
+      "componentType": 5126,
+      "count": 32170,
+      "max": [
+        0.9623500108718872,
+        0.9623500108718872,
+        3.6389200687408447
+      ],
+      "min": [
+        -0.9623500108718872,
+        -0.9623500108718872,
+        -0.048909999430179596
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 481752,
+      "componentType": 5126,
+      "count": 32170,
+      "max": [
+        0.9993637204170227,
+        0.9997064471244812,
+        1.0
+      ],
+      "min": [
+        -0.9993637204170227,
+        -0.9997064471244812,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 31904,
+      "componentType": 5126,
+      "count": 32170,
+      "max": [
+        0.0,
+        0.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 86016,
+      "componentType": 5125,
+      "count": 93144,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "Shadow Mine (https://sketchfab.com/aisaac)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/soda-can-c63a465fc3fc4b5dac6bf385bd954c2c",
+      "title": "Soda Can"
+    },
+    "generator": "Sketchfab-12.68.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 458592,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 289264,
+      "byteOffset": 458592,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 867792,
+      "byteOffset": 747856,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 1615648,
+      "uri": "scene.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "textures/LABEL_baseColor.jpeg"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "LABEL",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "roughnessFactor": 0.28
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "Material",
+      "pbrMetallicRoughness": {
+        "roughnessFactor": 0.31
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Circle_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Circle_1",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 5,
+            "POSITION": 4,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "name": "Root"
+    },
+    {
+      "children": [
+        3,
+        4
+      ],
+      "name": "Circle"
+    },
+    {
+      "mesh": 0,
+      "name": "Circle_0"
+    },
+    {
+      "mesh": 1,
+      "name": "Circle_1"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    }
+  ]
+}

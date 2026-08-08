@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<title>Glitch Simulator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; font-family: system-ui, sans-serif; color: #fff; }
+  #app { width: 100vw; height: 100vh; }
+  canvas, video { display: block; }
+
+  #viewport {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; background: #000;
+  }
+  #stage {
+    position: relative; cursor: grab; touch-action: none;
+    transform-origin: 0 0; will-change: transform;
+  }
+  #stage.dragging { cursor: grabbing; }
+  #resultCanvas {
+    max-width: min(100vw, 1440px); max-height: min(100vh, 960px);
+    width: auto; height: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+    background: #08080a;
+  }
+
+  #ui {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.05); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.09); border-radius: 16px;
+    padding: 13px 22px; z-index: 10;
+  }
+  #toolName { color: #fff; font-size: 17px; font-weight: 600; letter-spacing: 0.08em; width: 200px; }
+  .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.1); flex-shrink: 0; }
+
+  .font-selector { position: relative; cursor: pointer; user-select: none; }
+  .font-current {
+    color: rgba(255,255,255,0.45); font-size: 12px;
+    letter-spacing: 0.04em; padding: 4px 2px; white-space: nowrap;
+  }
+  .font-current:hover { color: rgba(255,255,255,0.7); }
+  .font-menu {
+    position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+    background: #18181c; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 13px; padding: 6px; min-width: 170px;
+    display: none; flex-direction: column; gap: 2px; z-index: 30;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .font-menu.open { display: flex; }
+  .font-opt {
+    padding: 9px 13px; border-radius: 8px; font-size: 13px; color: rgba(255,255,255,0.5);
+    cursor: pointer; transition: all 0.1s; white-space: nowrap;
+  }
+  .font-opt:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
+  .font-opt.active { background: rgba(255,255,255,0.1); color: #fff; }
+
+  #uploadBtn, #exportBtn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; color: rgba(255,255,255,0.55); font-size: 11px;
+    letter-spacing: 0.05em; padding: 6px 13px; cursor: pointer; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  #uploadBtn:hover, #exportBtn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  #videoFile { display: none; }
+
+  #panel {
+    position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    background: rgba(10,10,14,0.78); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+    padding: 20px 18px; width: 172px; z-index: 10;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .ctrl-row { display: flex; flex-direction: column; gap: 7px; }
+  .ctrl-label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+  }
+  .ctrl-label span { color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 2px;
+    background: rgba(255,255,255,0.12); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    border-radius: 50%; background: #fff; cursor: pointer;
+    box-shadow: 0 0 5px rgba(255,255,255,0.35);
+  }
+  .panel-divider { height: 1px; background: rgba(255,255,255,0.07); }
+  .presets { display: flex; flex-direction: column; gap: 5px; }
+  .preset-btn {
+    width: 100%; padding: 9px 13px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.45); font-size: 13px; letter-spacing: 0.03em;
+    cursor: pointer; text-align: left; transition: all 0.15s;
+  }
+  .preset-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+  .preset-btn.active { border-color: rgba(255,255,255,0.25); color: #fff; background: rgba(255,255,255,0.09); }
+  #hint {
+    position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.13); font-size: 10px; letter-spacing: 0.13em;
+    text-transform: uppercase; pointer-events: none; user-select: none;
+  }
+  @media (max-width: 760px) {
+    #panel { right: 14px; width: 158px; }
+    #ui { max-width: calc(100vw - 24px); overflow-x: auto; }
+    #toolName { width: 150px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hint">Upload a video - Drag to pan - Scroll to zoom</div>
+  <div id="viewport">
+    <div id="stage">
+      <canvas id="resultCanvas" width="900" height="1120"></canvas>
+    </div>
+  </div>
+  <div id="ui">
+    <div id="toolName">Glitch Simulator</div>
+    <div class="sep"></div>
+    <div class="font-selector" id="modeSelector">
+      <div class="font-current" id="modeCurrent">RGB Crash</div>
+      <div class="font-menu" id="modeMenu">
+        <div class="font-opt active" data-mode="rgb">RGB Crash</div>
+        <div class="font-opt" data-mode="neon">Neon Split</div>
+        <div class="font-opt" data-mode="vhs">VHS Damage</div>
+        <div class="font-opt" data-mode="mono">Mono Static</div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <button id="uploadBtn" type="button">Upload Video</button>
+    <input type="file" id="videoFile" accept="video/mp4,video/webm,video/quicktime,video/*">
+    <div class="sep"></div>
+    <button id="exportBtn" type="button">Export WebM</button>
+  </div>
+  <div id="panel">
+    <div class="ctrl-row">
+      <div class="ctrl-label">Intensity <span id="intensityVal">0.72</span></div>
+      <input type="range" id="intensity" min="0" max="1" step="0.01" value="0.72">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Speed <span id="speedVal">0.70</span></div>
+      <input type="range" id="speed" min="0" max="2" step="0.01" value="0.70">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Color Split <span id="colorSplitVal">0.58</span></div>
+      <input type="range" id="colorSplit" min="0" max="1" step="0.01" value="0.58">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Blocks <span id="blocksVal">0.64</span></div>
+      <input type="range" id="blocks" min="0" max="1" step="0.01" value="0.64">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Tearing <span id="tearingVal">0.46</span></div>
+      <input type="range" id="tearing" min="0" max="1" step="0.01" value="0.46">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Grain <span id="noiseVal">0.28</span></div>
+      <input type="range" id="noise" min="0" max="1" step="0.01" value="0.28">
+    </div>
+    <div class="panel-divider"></div>
+    <div class="presets">
+      <button class="preset-btn active" data-preset="digital">Digital</button>
+      <button class="preset-btn" data-preset="neon">Neon</button>
+      <button class="preset-btn" data-preset="vhs">VHS</button>
+      <button class="preset-btn" data-preset="static">Static</button>
+    </div>
+  </div>
+</div>
+
+<video id="sourceVideo" muted loop playsinline style="display:none"></video>
+<canvas id="sourceCanvas" style="display:none"></canvas>
+<canvas id="workCanvas" style="display:none"></canvas>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const resultCanvas = $('resultCanvas');
+const resultCtx = resultCanvas.getContext('2d');
+const sourceCanvas = $('sourceCanvas');
+const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+const workCanvas = $('workCanvas');
+const workCtx = workCanvas.getContext('2d');
+const video = $('sourceVideo');
+const stageEl = $('stage');
+const modeMenu = $('modeMenu');
+const modeCurrent = $('modeCurrent');
+const DEFAULT_VIDEO_URL = 'https://dl.dropboxusercontent.com/scl/fi/p2eefmx8a0i5n7c9r4azc/girl.mp4?rlkey=khdejt6hwzplsohukog76eqz6&dl=1';
+
+let mode = 'rgb';
+let hasVideo = false;
+let videoUrl = null;
+let viewZoom = 1;
+let panX = 0;
+let panY = 0;
+let dragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let panStartX = 0;
+let panStartY = 0;
+let exportRecorder = null;
+let renderQueued = false;
+let lastRenderAt = 0;
+
+const presets = {
+  digital: { intensity: 0.72, speed: 0.70, colorSplit: 0.58, blocks: 0.64, tearing: 0.46, noise: 0.28 },
+  neon:    { intensity: 0.88, speed: 1.10, colorSplit: 0.92, blocks: 0.76, tearing: 0.52, noise: 0.22 },
+  vhs:     { intensity: 0.48, speed: 0.42, colorSplit: 0.36, blocks: 0.42, tearing: 0.68, noise: 0.46 },
+  static:  { intensity: 1.00, speed: 1.55, colorSplit: 0.74, blocks: 0.94, tearing: 0.74, noise: 0.64 },
+};
+
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function value(id) {
+  return parseFloat($(id).value);
+}
+
+function rand(seed) {
+  const n = Math.sin(seed * 127.1 + 311.7) * 43758.5453123;
+  return n - Math.floor(n);
+}
+
+function sizeToVideo() {
+  const maxSide = 760;
+  const vw = video.videoWidth || 900;
+  const vh = video.videoHeight || 1120;
+  const scale = Math.min(1, maxSide / Math.max(vw, vh));
+  const w = Math.max(1, Math.round(vw * scale));
+  const h = Math.max(1, Math.round(vh * scale));
+  resultCanvas.width = sourceCanvas.width = workCanvas.width = w;
+  resultCanvas.height = sourceCanvas.height = workCanvas.height = h;
+  resetView();
+}
+
+function drawPlaceholder(time) {
+  const w = resultCanvas.width;
+  const h = resultCanvas.height;
+  sourceCtx.fillStyle = '#08080a';
+  sourceCtx.fillRect(0, 0, w, h);
+  sourceCtx.fillStyle = '#16161d';
+  sourceCtx.fillRect(w * 0.2, h * 0.18, w * 0.6, h * 0.64);
+  sourceCtx.fillStyle = '#e8e8e8';
+  sourceCtx.font = '700 28px system-ui, sans-serif';
+  sourceCtx.textAlign = 'center';
+  sourceCtx.fillText('UPLOAD VIDEO', w / 2, h / 2 - 10);
+  sourceCtx.font = '13px system-ui, sans-serif';
+  sourceCtx.fillStyle = 'rgba(255,255,255,0.42)';
+  sourceCtx.fillText('MP4, MOV, WEBM', w / 2, h / 2 + 22);
+  for (let i = 0; i < 24; i++) {
+    const y = (i * 49 + time * 80) % h;
+    sourceCtx.fillStyle = i % 3 === 0 ? '#ff174d' : i % 3 === 1 ? '#00ffd0' : '#2f65ff';
+    sourceCtx.fillRect((rand(i + time) + 0.5) * w * 0.4, y, w * (0.1 + Math.abs(rand(i * 2)) * 0.35), 4);
+  }
+}
+
+function drawChannel(dx, dy, color, alpha, sx = 0, sy = 0, sw = sourceCanvas.width, sh = sourceCanvas.height) {
+  resultCtx.save();
+  resultCtx.globalCompositeOperation = 'screen';
+  resultCtx.globalAlpha = alpha;
+  resultCtx.filter = `brightness(1.25) sepia(1) saturate(8) hue-rotate(${color}deg)`;
+  resultCtx.drawImage(sourceCanvas, sx, sy, sw, sh, sx + dx, sy + dy, sw, sh);
+  resultCtx.restore();
+  resultCtx.filter = 'none';
+  resultCtx.globalCompositeOperation = 'source-over';
+}
+
+function frameFilter() {
+  if (mode === 'mono') return 'grayscale(1) contrast(1.28) brightness(0.92)';
+  if (mode === 'vhs') return 'grayscale(0.82) sepia(0.24) contrast(1.18) saturate(0.72)';
+  if (mode === 'neon') return 'contrast(1.18) saturate(1.55) hue-rotate(8deg)';
+  return 'grayscale(0.68) contrast(1.15) saturate(0.76)';
+}
+
+function drawWarpedBase(pulse, intensity, blocks) {
+  const w = resultCanvas.width;
+  const h = resultCanvas.height;
+  const cluster = 10 + Math.round((1 - blocks) * 26);
+
+  resultCtx.clearRect(0, 0, w, h);
+  resultCtx.filter = frameFilter();
+  for (let y = 0; y < h; y += cluster) {
+    const clusterSeed = Math.floor(y / cluster) + pulse * 17;
+    const jitter = (rand(clusterSeed) - 0.5) * (8 + intensity * 70) * blocks;
+    const dx = Math.round(jitter);
+    const stretch = Math.abs(dx) * (0.22 + blocks * 0.42);
+    const bandH = Math.min(cluster, h - y);
+    resultCtx.drawImage(sourceCanvas, 0, y, w, bandH, dx - stretch, y, w + stretch * 2, bandH);
+  }
+  resultCtx.filter = 'none';
+}
+
+function drawColorBleed(t, pulse, intensity, split) {
+  if (split <= 0) return;
+  const w = resultCanvas.width;
+  const h = resultCanvas.height;
+  const drift = Math.round((6 + split * 38) * intensity);
+
+  drawChannel(-drift, 0, mode === 'neon' ? 125 : -38, split * 0.34);
+  drawChannel(drift * 0.7, 0, mode === 'neon' ? 285 : 158, split * 0.28);
+
+  resultCtx.save();
+  resultCtx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 6 + split * 10; i++) {
+    const y = Math.floor(rand(i * 8.7 + pulse) * h);
+    const stripH = 1 + Math.floor(rand(i * 3.4) * 5);
+    const dx = Math.round((rand(i + pulse) - 0.5) * drift * 2.4);
+    resultCtx.globalAlpha = 0.14 + split * 0.18;
+    resultCtx.filter = `hue-rotate(${i % 2 ? 140 : -80}deg) saturate(3)`;
+    resultCtx.drawImage(sourceCanvas, 0, y, w, stripH, dx, y, w, stripH);
+  }
+  resultCtx.restore();
+  resultCtx.filter = 'none';
+  resultCtx.globalCompositeOperation = 'source-over';
+}
+
+function drawSignalBands(t, pulse, intensity, blocks, tearing) {
+  const w = resultCanvas.width;
+  const h = resultCanvas.height;
+  const bandCount = Math.round(6 + blocks * 16 + tearing * 10);
+  const colors = mode === 'mono' ? ['#ececec', '#222'] : ['#e9ece9', '#00ffd0', '#ff3b7f', '#e8ff2f', '#5670ff'];
+
+  resultCtx.save();
+  for (let i = 0; i < bandCount; i++) {
+    const y = Math.floor(rand(i * 13.1 + pulse * 0.71) * h);
+    const sourceH = Math.max(2, Math.floor(2 + rand(i * 4.2) * (8 + intensity * 32)));
+    const sourceX = Math.floor(rand(i * 2.6 + pulse) * w * 0.35);
+    const sourceW = Math.floor(w * (0.08 + rand(i * 3.9) * 0.36));
+    const pull = (rand(i * 9.2 + pulse) - 0.5) * w * (0.18 + intensity * 0.46);
+    const destX = clamp(sourceX + pull, -sourceW * 1.5, w);
+    const destW = sourceW * (1.25 + blocks * 2.2);
+
+    resultCtx.globalAlpha = 0.18 + blocks * 0.38;
+    resultCtx.drawImage(sourceCanvas, sourceX, y, sourceW, sourceH, destX, y, destW, sourceH);
+
+    resultCtx.globalAlpha = 0.32 + tearing * 0.42;
+    resultCtx.fillStyle = colors[i % colors.length];
+    resultCtx.fillRect(destX + destW * rand(i * 4.8), y + sourceH + 1, destW * (0.22 + rand(i * 6.3) * 0.7), 1);
+  }
+  resultCtx.restore();
+}
+
+function drawSignalTexture(t, pulse, noise, tearing) {
+  if (noise <= 0 && tearing <= 0) return;
+  const w = resultCanvas.width;
+  const h = resultCanvas.height;
+  const specks = Math.floor(70 + noise * 360);
+  const grain = Math.floor(noise * noise * 2100);
+  const hardGrain = Math.max(0, (noise - 0.55) / 0.45);
+
+  resultCtx.save();
+  resultCtx.globalAlpha = 0.08 + noise * 0.28;
+  for (let i = 0; i < specks; i++) {
+    const y = Math.floor(rand(i * 6.7 + pulse * 4.3) * h);
+    const x = Math.floor(rand(i * 4.9 + pulse * 3.1) * w);
+    const width = rand(i * 2.1) > 0.78 ? Math.floor(8 + rand(i * 8.2) * w * 0.18) : 1;
+    resultCtx.fillStyle = mode === 'mono' ? '#ddd' : ['#ffffff', '#9fffea', '#ff6aa8', '#dfff56'][i % 4];
+    resultCtx.fillRect(x, y, width, 1);
+  }
+
+  resultCtx.globalCompositeOperation = 'overlay';
+  resultCtx.globalAlpha = 0.20 + noise * 0.40;
+  for (let i = 0; i < grain; i++) {
+    const x = Math.floor(rand(i * 12.9 + pulse * 7.1) * w);
+    const y = Math.floor(rand(i * 15.3 + pulse * 5.6) * h);
+    const shade = rand(i * 9.7 + pulse) > 0.5 ? 245 : 18 + Math.floor(rand(i * 3.2) * 42);
+    resultCtx.fillStyle = `rgb(${shade},${shade},${shade})`;
+    resultCtx.fillRect(x, y, 1 + Math.floor(noise * 2.2), 1 + Math.floor(hardGrain * 1.2));
+  }
+
+  resultCtx.globalCompositeOperation = 'soft-light';
+  resultCtx.globalAlpha = 0.18 + tearing * 0.18;
+  for (let y = 0; y < h; y += 4) {
+    const shade = 58 + Math.floor(rand(y * 0.37 + pulse * 2.1) * 86);
+    resultCtx.fillStyle = `rgb(${shade},${shade},${shade})`;
+    resultCtx.fillRect(0, y, w, 1);
+  }
+  resultCtx.restore();
+  resultCtx.globalCompositeOperation = 'source-over';
+}
+
+function scheduleRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(now => {
+    renderQueued = false;
+    if (now - lastRenderAt < 33) {
+      scheduleRender();
+      return;
+    }
+    lastRenderAt = now;
+    render(now);
+  });
+}
+
+function render(now = 0) {
+  const t = now / 1000;
+  const w = resultCanvas.width;
+  const h = resultCanvas.height;
+  const intensity = value('intensity');
+  const speed = value('speed');
+  const split = value('colorSplit');
+  const blocks = value('blocks');
+  const tearing = value('tearing');
+  const noise = value('noise');
+
+  if (hasVideo && video.readyState >= 2) sourceCtx.drawImage(video, 0, 0, w, h);
+  else drawPlaceholder(t);
+
+  const pulse = Math.floor(t * (4 + speed * 18));
+  drawWarpedBase(pulse, intensity, blocks);
+  drawColorBleed(t, pulse, intensity, split);
+  drawSignalBands(t, pulse, intensity, blocks, tearing);
+  drawSignalTexture(t, pulse, noise, tearing);
+
+  scheduleRender();
+}
+
+function loadVideo(file) {
+  if (videoUrl) URL.revokeObjectURL(videoUrl);
+  videoUrl = URL.createObjectURL(file);
+  video.src = videoUrl;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.onloadedmetadata = () => {
+    hasVideo = true;
+    sizeToVideo();
+    video.play();
+  };
+}
+
+function loadDefaultVideo() {
+  video.src = DEFAULT_VIDEO_URL;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.onloadedmetadata = () => {
+    hasVideo = true;
+    sizeToVideo();
+    video.play().catch(() => {});
+  };
+  video.onerror = () => {
+    hasVideo = false;
+    sizeToVideo();
+  };
+}
+
+function applyView() {
+  stageEl.style.transform = `translate(${panX}px, ${panY}px) scale(${viewZoom})`;
+}
+
+function resetView() {
+  viewZoom = 1;
+  panX = 0;
+  panY = 0;
+  applyView();
+}
+
+stageEl.addEventListener('wheel', e => {
+  e.preventDefault();
+  const prev = viewZoom;
+  const next = clamp(prev * Math.exp(-e.deltaY * 0.001), 0.25, 10);
+  const rect = stageEl.getBoundingClientRect();
+  const localX = (e.clientX - rect.left) / prev;
+  const localY = (e.clientY - rect.top) / prev;
+  panX -= localX * (next - prev);
+  panY -= localY * (next - prev);
+  viewZoom = next;
+  applyView();
+}, { passive: false });
+
+stageEl.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  dragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  panStartX = panX;
+  panStartY = panY;
+  stageEl.classList.add('dragging');
+  stageEl.setPointerCapture(e.pointerId);
+});
+stageEl.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  panX = panStartX + e.clientX - dragStartX;
+  panY = panStartY + e.clientY - dragStartY;
+  applyView();
+});
+function stopPan(e) {
+  if (!dragging) return;
+  dragging = false;
+  stageEl.classList.remove('dragging');
+  if (e && stageEl.hasPointerCapture(e.pointerId)) stageEl.releasePointerCapture(e.pointerId);
+}
+stageEl.addEventListener('pointerup', stopPan);
+stageEl.addEventListener('pointercancel', stopPan);
+
+$('uploadBtn').addEventListener('click', () => $('videoFile').click());
+$('videoFile').addEventListener('change', e => {
+  if (e.target.files[0]) loadVideo(e.target.files[0]);
+});
+
+document.querySelectorAll('input[type="range"]').forEach(input => {
+  const valueEl = $(`${input.id}Val`);
+  input.addEventListener('input', () => {
+    if (valueEl) valueEl.textContent = parseFloat(input.value).toFixed(2);
+  });
+});
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    Object.entries(presets[btn.dataset.preset]).forEach(([id, val]) => {
+      $(id).value = val;
+      $(`${id}Val`).textContent = val.toFixed(2);
+    });
+  });
+});
+
+$('modeSelector').addEventListener('click', e => {
+  e.stopPropagation();
+  modeMenu.classList.toggle('open');
+});
+document.addEventListener('click', () => modeMenu.classList.remove('open'));
+document.querySelectorAll('.font-opt').forEach(opt => {
+  opt.addEventListener('click', e => {
+    e.stopPropagation();
+    mode = opt.dataset.mode;
+    document.querySelectorAll('.font-opt').forEach(o => o.classList.remove('active'));
+    opt.classList.add('active');
+    modeCurrent.textContent = opt.textContent;
+    modeMenu.classList.remove('open');
+  });
+});
+
+$('exportBtn').addEventListener('click', () => {
+  let stream;
+  try {
+    stream = resultCanvas.captureStream(30);
+  } catch {
+    alert('This remote demo video cannot be exported by the browser. Upload a local video to export.');
+    return;
+  }
+  const chunks = [];
+  const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+  exportRecorder = new MediaRecorder(stream, { mimeType: mime });
+  exportRecorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  exportRecorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'glitch-effect.webm';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    $('exportBtn').textContent = 'Export WebM';
+  };
+  $('exportBtn').textContent = 'Recording...';
+  exportRecorder.start();
+  setTimeout(() => {
+    if (exportRecorder && exportRecorder.state === 'recording') exportRecorder.stop();
+  }, 5000);
+});
+
+sizeToVideo();
+loadDefaultVideo();
+scheduleRender();
+</script>
+</body>
+</html>
