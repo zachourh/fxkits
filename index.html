@@ -147,14 +147,6 @@ body {
     linear-gradient(135deg, #07070a 0%, #1c1c22 52%, #000 100%);
 }
 
-.card-thumb.can-thumb {
-  background:
-    radial-gradient(ellipse at 50% 18%, #ffffff 0 12%, #d8d8d5 13% 19%, transparent 20%),
-    linear-gradient(90deg, transparent 0 29%, rgba(255,255,255,0.7) 30% 37%, transparent 38% 65%, rgba(0,0,0,0.12) 66% 73%, transparent 74%),
-    linear-gradient(180deg, #eeeeeb 0 14%, #ffffff 15% 79%, #c9c9c5 80% 100%),
-    linear-gradient(135deg, #d7d7d3 0%, #f2f2ef 52%, #b8b8b4 100%);
-}
-
 .section-intro {
   grid-column: 1 / -1;
   margin: 56px 0 6px;
@@ -353,7 +345,9 @@ footer {
   </div>
 
   <a class="card" href="3d-can-editor/">
-    <div class="card-thumb can-thumb"></div>
+    <div class="card-thumb">
+      <video autoplay loop muted playsinline src="3d-can-editor/Th-Can.mp4"></video>
+    </div>
     <div class="card-info">
       <div class="card-text">
         <div class="card-name">3D Can Editor</div>
