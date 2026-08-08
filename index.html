@@ -155,29 +155,27 @@ body {
     linear-gradient(135deg, #d7d7d3 0%, #f2f2ef 52%, #b8b8b4 100%);
 }
 
-.section-divider {
+.section-intro {
   grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin: 48px 0 6px;
-}
-
-.section-divider::before,
-.section-divider::after {
-  content: "";
-  height: 1px;
-  background: rgba(255,255,255,0.12);
-  flex: 1;
+  margin: 56px 0 6px;
+  padding: 0 4px;
+  text-align: left;
 }
 
 .section-title {
-  color: #777;
-  font-size: 12px;
+  color: #fff;
+  font-size: 28px;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.section-copy {
+  color: #999;
+  font-size: 15px;
+  line-height: 1.35;
+  max-width: 420px;
+  margin-top: 10px;
 }
 
 .card-info {
@@ -349,8 +347,9 @@ footer {
     </div>
   </a>
 
-  <div class="section-divider">
+  <div class="section-intro">
     <div class="section-title">Interactive Mockups</div>
+    <p class="section-copy">Upload your artwork and preview it on realistic product mockups with realtime 3D controls.</p>
   </div>
 
   <a class="card" href="3d-can-editor/">
