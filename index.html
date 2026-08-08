@@ -139,14 +139,6 @@ body {
     linear-gradient(135deg, #0c3a25 0%, #101010 52%, #632a12 100%);
 }
 
-.card-thumb.glitch-thumb {
-  background:
-    linear-gradient(90deg, transparent 0 12%, #00ffd0 12% 24%, transparent 24% 38%, #ff174d 38% 49%, transparent 49%),
-    repeating-linear-gradient(0deg, rgba(255,255,255,0.22) 0 1px, transparent 1px 7px),
-    radial-gradient(circle at 50% 38%, #d8d8d8 0 11%, #19191f 12% 24%, transparent 25%),
-    linear-gradient(135deg, #07070a 0%, #1c1c22 52%, #000 100%);
-}
-
 .section-intro {
   grid-column: 1 / -1;
   margin: 56px 0 6px;
@@ -329,7 +321,9 @@ footer {
   </a>
 
   <a class="card" href="glitch-simulator/">
-    <div class="card-thumb glitch-thumb"></div>
+    <div class="card-thumb">
+      <video autoplay loop muted playsinline src="glitch-simulator/Th-Glitch.mp4"></video>
+    </div>
     <div class="card-info">
       <div class="card-text">
         <div class="card-name">Glitch Simulator</div>
