@@ -215,7 +215,7 @@
     <div class="export-wrap" id="exportWrap">
       <button id="exportBtn">Export v</button>
       <div class="export-menu" id="exportMenu">
-        <button class="export-opt" data-action="png">Export PNG</button>
+        <button class="export-opt" data-action="png" data-fxkits-export>Export PNG</button>
         <button class="export-opt" data-action="reset">Reset View</button>
       </div>
     </div>
@@ -566,5 +566,6 @@ exportMenu.addEventListener('click', e => {
 
 loadDefaultImage();
 </script>
+<script src="/gate.js" defer></script>
 </body>
 </html>

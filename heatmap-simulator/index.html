@@ -152,7 +152,7 @@
     <input type="file" id="image-file" accept="image/png,image/jpeg,image/webp,image/gif">
     <em id="filename">Default image loaded</em>
     <div class="sep"></div>
-    <button id="btn-export" type="button">Export PNG</button>
+    <button id="btn-export" type="button" data-fxkits-export>Export PNG</button>
   </div>
 
   <div id="panel">
@@ -571,5 +571,6 @@ $('btn-export').addEventListener('click', () => {
 updateSwatches();
 loadDefaultImage();
 </script>
+<script src="/gate.js" defer></script>
 </body>
 </html>

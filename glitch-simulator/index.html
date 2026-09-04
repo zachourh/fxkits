@@ -135,7 +135,7 @@
     <button id="uploadBtn" type="button">Upload Video</button>
     <input type="file" id="videoFile" accept="video/mp4,video/webm,video/quicktime,video/*">
     <div class="sep"></div>
-    <button id="exportBtn" type="button">Export WebM</button>
+    <button id="exportBtn" type="button" data-fxkits-export>Export WebM</button>
   </div>
   <div id="panel">
     <div class="ctrl-row">
@@ -575,5 +575,6 @@ sizeToVideo();
 loadDefaultVideo();
 scheduleRender();
 </script>
+<script src="/gate.js" defer></script>
 </body>
 </html>

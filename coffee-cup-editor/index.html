@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
-<title>3D Can Editor</title>
+<title>Coffee Cup Editor</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #d9d9d6; overflow: hidden; font-family: system-ui, sans-serif; color: #fff; }
@@ -153,14 +153,14 @@
 </head>
 <body>
 <div id="app">
-  <div id="loading">Loading Can</div>
+  <div id="loading">Loading Cup</div>
   <div id="hint">Drag to orbit - right drag to pan - scroll to zoom</div>
 
   <div id="ui">
-    <div id="toolName">3D Can Editor</div>
+    <div id="toolName">Coffee Cup Editor</div>
     <div class="sep"></div>
-    <div class="mode-label">Full Wrap</div>
-    <div id="uploadSpec" class="upload-spec">1800 x 1200 px</div>
+    <div class="mode-label">Cup Sleeve</div>
+    <div id="uploadSpec" class="upload-spec">1800 x 900 px</div>
     <div class="sep"></div>
     <button id="uploadWrapBtn" type="button">Upload Design</button>
     <button id="clearWrapBtn" class="icon-btn" type="button" aria-label="Remove design" title="Remove design">X</button>
@@ -194,20 +194,20 @@
 
   <div id="panel">
     <div class="ctrl-row">
-      <div class="ctrl-label">Metal <span id="metalnessVal">1.00</span></div>
-      <input type="range" id="metalness" min="0" max="1" step="0.01" value="1">
+      <div class="ctrl-label">Paper <span id="paperVal">0.86</span></div>
+      <input type="range" id="paper" min="0" max="1" step="0.01" value="0.86">
     </div>
     <div class="ctrl-row">
-      <div class="ctrl-label">Roughness <span id="roughnessVal">0.22</span></div>
-      <input type="range" id="roughness" min="0" max="0.8" step="0.01" value="0.22">
+      <div class="ctrl-label">Roughness <span id="roughnessVal">0.42</span></div>
+      <input type="range" id="roughness" min="0.12" max="0.9" step="0.01" value="0.42">
     </div>
     <div class="ctrl-row">
-      <div class="ctrl-label">Shine <span id="shineVal">0.23</span></div>
-      <input type="range" id="shine" min="0" max="2.5" step="0.01" value="0.23">
+      <div class="ctrl-label">Shine <span id="shineVal">0.34</span></div>
+      <input type="range" id="shine" min="0" max="1.4" step="0.01" value="0.34">
     </div>
     <div class="ctrl-row">
-      <div class="ctrl-label">Label Gloss <span id="labelGlossVal">0.45</span></div>
-      <input type="range" id="labelGloss" min="0" max="1" step="0.01" value="0.45">
+      <div class="ctrl-label">Sleeve Gloss <span id="labelGlossVal">0.28</span></div>
+      <input type="range" id="labelGloss" min="0" max="1" step="0.01" value="0.28">
     </div>
     <div class="ctrl-row">
       <div class="ctrl-label">Tilt <span id="tiltVal">0.00</span></div>
@@ -217,13 +217,13 @@
       <div class="ctrl-label">Background</div>
       <input type="color" id="bgColor" value="#d9d9d6" aria-label="Background color">
     </div>
-    <div class="ctrl-row">
-      <div class="ctrl-label">Can Model</div>
-      <div class="model-options">
-        <button class="model-btn active" type="button" data-model="standard">Standard</button>
-        <button class="model-btn" type="button" data-model="medium">Medium</button>
-        <button class="model-btn" type="button" data-model="tall">Tall</button>
-      </div>
+    <div class="color-row">
+      <div class="ctrl-label">Cup Color</div>
+      <input type="color" id="cupColor" value="#4d4b47" aria-label="Cup color">
+    </div>
+    <div class="color-row">
+      <div class="ctrl-label">Lid Color</div>
+      <input type="color" id="lidColor" value="#1c1c17" aria-label="Lid color">
     </div>
   </div>
 </div>
@@ -261,7 +261,7 @@ scene.background = new THREE.Color(0xd9d9d6)
 document.body.style.backgroundColor = '#d9d9d6'
 
 const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.05, 100)
-camera.position.set(0, 1.0, 7.2)
+camera.position.set(0, 0.55, 7.2)
 
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
@@ -329,97 +329,72 @@ floor.position.y = -2.18
 floor.receiveShadow = true
 scene.add(floor)
 
-const canMaterial = new THREE.MeshPhysicalMaterial({
-  color: 0xf5f3ec,
-  metalness: 1,
-  roughness: 0.22,
-  envMapIntensity: 0.23,
-  clearcoat: 0.164,
-  clearcoatRoughness: 0.18,
+const cupMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0x4d4b47,
+  metalness: 0,
+  roughness: 0.42,
+  envMapIntensity: 0.34,
+  clearcoat: 0.18,
+  clearcoatRoughness: 0.3,
 })
 
 const lidMaterial = new THREE.MeshPhysicalMaterial({
-  color: 0xe7e5dc,
-  metalness: 1,
-  roughness: 0.22,
-  envMapIntensity: 0.23,
-  clearcoat: 0.164,
-  clearcoatRoughness: 0.18,
+  color: 0x1c1c17,
+  metalness: 0,
+  roughness: 0.38,
+  envMapIntensity: 0.42,
+  clearcoat: 0.2,
+  clearcoatRoughness: 0.24,
 })
 
 const labelMaterial = new THREE.MeshPhysicalMaterial({
   color: 0xffffff,
   metalness: 0,
-  roughness: 0.32,
+  roughness: 0.46,
   envMapIntensity: 0.8,
-  clearcoat: 0.45,
-  clearcoatRoughness: 0.18,
-  side: THREE.FrontSide,
+  clearcoat: 0.28,
+  clearcoatRoughness: 0.24,
+  side: THREE.DoubleSide,
   depthTest: true,
   depthWrite: true,
-  polygonOffset: true,
-  polygonOffsetFactor: -2,
-  polygonOffsetUnits: -2,
 })
 
-let canObject = null
-let labelMesh = null
-let canHeight = 4
-let canRadius = 1
-let bodyRadius = 1
-let canCenterY = 0
-const canCenter = new THREE.Vector3()
+let cupObject = null
+let cupHeight = 4
+let cupRadius = 1
+const cupCenter = new THREE.Vector3()
 let wrapImage = null
-const modelWrapImages = {}
-const defaultWrapCache = {}
+let useDefaultArtwork = true
 let labelCanvas = null
 let labelTexture = null
-let topAssembly = null
-let labelRadiusProfile = null
-let modelHasUvLabel = false
-let currentModelKey = 'standard'
-let currentLabelWidth = 1800
-let currentLabelHeight = 1200
-let currentLabelBodyRatio = 0.965
-const CAN_MODELS = {
-  standard: {
-    name: 'Standard',
-    url: 'assets/model-3/scene.gltf',
-    width: 1800,
-    height: 1200,
-    bodyRatio: 0.965,
-    uvLabel: true,
-    defaultWrap: 'assets/default-wrap.png',
-  },
-  medium: {
-    name: 'Medium',
-    url: 'assets/model-4/can-medium.glb',
-    width: 1800,
-    height: 1500,
-    bodyRatio: 0.955,
-    uvLabel: false,
-    defaultWrap: 'assets/wraps/medium-can.png',
-  },
-  tall: {
-    name: 'Tall',
-    url: 'assets/model-4/can-tall.glb',
-    width: 1800,
-    height: 2100,
-    bodyRatio: 0.965,
-    uvLabel: false,
-    defaultWrap: 'assets/wraps/tall-can.png',
-  },
-}
+const labelWidth = 1800
+const labelHeight = 900
+const MODEL_URL = 'assets/model/scene.gltf'
 
 function makeDefaultLabelCanvas() {
   const cv = document.createElement('canvas')
-  cv.width = currentLabelWidth; cv.height = currentLabelHeight
+  cv.width = labelWidth; cv.height = labelHeight
   const cx = cv.getContext('2d')
-  cx.fillStyle = '#ffffff'
+  cx.fillStyle = '#f3ede3'
   cx.fillRect(0, 0, cv.width, cv.height)
-  cx.strokeStyle = 'rgba(0,0,0,0.08)'
-  cx.lineWidth = 2
-  cx.strokeRect(18, 18, cv.width - 36, cv.height - 36)
+  const grad = cx.createLinearGradient(0, 0, cv.width, cv.height)
+  grad.addColorStop(0, '#fff7ec')
+  grad.addColorStop(0.48, '#d7a66a')
+  grad.addColorStop(1, '#2b1b13')
+  cx.fillStyle = grad
+  cx.fillRect(0, 0, cv.width, cv.height)
+  cx.fillStyle = 'rgba(255,255,255,0.88)'
+  cx.fillRect(cv.width * 0.09, cv.height * 0.16, cv.width * 0.82, cv.height * 0.68)
+  cx.fillStyle = '#1c1714'
+  cx.font = '800 132px system-ui, sans-serif'
+  cx.textAlign = 'center'
+  cx.fillText('ROAST HOUSE', cv.width / 2, cv.height * 0.46)
+  cx.font = '500 42px system-ui, sans-serif'
+  cx.letterSpacing = '8px'
+  cx.fillText('SPECIALTY COFFEE', cv.width / 2, cv.height * 0.59)
+  cx.strokeStyle = 'rgba(28,23,20,0.22)'
+  cx.lineWidth = 6
+  cx.strokeRect(cv.width * 0.12, cv.height * 0.2, cv.width * 0.76, cv.height * 0.6)
   return cv
 }
 
@@ -438,262 +413,48 @@ function drawCover(cx, image, x, y, w, h) {
 }
 
 function drawSmartFit(cx, image, x, y, w, h) {
-  const targetAspect = w / h
-  const imageAspect = image.width / image.height
-  const aspectDelta = Math.abs(targetAspect - imageAspect) / targetAspect
-  const draw = aspectDelta > 0.04 ? drawContain : drawCover
-  draw(cx, image, x, y, w, h)
+  const maxW = w * 0.34
+  const maxH = h * 0.58
+  const ratio = Math.min(maxW / image.width, maxH / image.height)
+  const dw = image.width * ratio
+  const dh = image.height * ratio
+  cx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh)
 }
 
 function rebuildLabelTexture() {
-  if (labelCanvas && (labelCanvas.width !== currentLabelWidth || labelCanvas.height !== currentLabelHeight)) {
-    labelCanvas = null
-    if (labelTexture) {
-      labelTexture.dispose()
-      labelTexture = null
-    }
-  }
   if (!labelCanvas) labelCanvas = makeDefaultLabelCanvas()
   const cx = labelCanvas.getContext('2d')
   cx.fillStyle = '#ffffff'
   cx.fillRect(0, 0, labelCanvas.width, labelCanvas.height)
 
   if (wrapImage) drawSmartFit(cx, wrapImage, 0, 0, labelCanvas.width, labelCanvas.height)
+  if (!wrapImage && useDefaultArtwork) {
+    const fallback = makeDefaultLabelCanvas()
+    cx.drawImage(fallback, 0, 0)
+  }
 
   if (!labelTexture) {
     labelTexture = new THREE.CanvasTexture(labelCanvas)
     labelTexture.colorSpace = THREE.SRGBColorSpace
+    labelTexture.wrapS = THREE.RepeatWrapping
+    labelTexture.wrapT = THREE.ClampToEdgeWrapping
     labelTexture.anisotropy = renderer.capabilities.getMaxAnisotropy()
   }
   labelMaterial.map = labelTexture
-  canMaterial.map = modelHasUvLabel ? labelTexture : null
   labelTexture.needsUpdate = true
-  canMaterial.needsUpdate = true
   labelMaterial.needsUpdate = true
-  if (canObject) updateLabelMesh()
 }
 
-function updateLabelMesh() {
-  if (!canObject) return
-  if (modelHasUvLabel) {
-    if (labelMesh) {
-      root.remove(labelMesh)
-      labelMesh.geometry.dispose()
-      labelMesh = null
-    }
-    return
-  }
-  const labelHeight = canHeight * currentLabelBodyRatio
-  if (labelMesh) {
-    root.remove(labelMesh)
-    labelMesh.geometry.dispose()
-  }
-  const geo = labelRadiusProfile
-    ? createProfiledLabelGeometry(labelHeight)
-    : new THREE.CylinderGeometry(bodyRadius * 1.006, bodyRadius * 1.006, labelHeight, 256, 1, true, Math.PI)
-  labelMesh = new THREE.Mesh(geo, labelMaterial)
-  labelMesh.position.copy(canCenter)
-  labelMesh.castShadow = true
-  labelMesh.receiveShadow = true
-  labelMesh.renderOrder = 8
-  root.add(labelMesh)
-}
-
-function createProfiledLabelGeometry(labelHeight) {
-  const radialSegments = 256
-  const heightSegments = 96
-  const positions = []
-  const normals = []
-  const uvs = []
-  const indices = []
-  const half = labelHeight * 0.5
-
-  for (let yStep = 0; yStep <= heightSegments; yStep++) {
-    const v = yStep / heightSegments
-    const localY = -half + v * labelHeight
-    const radius = sampleLabelRadius(canCenter.y + localY) * 1.008
-
-    for (let xStep = 0; xStep <= radialSegments; xStep++) {
-      const u = xStep / radialSegments
-      const theta = Math.PI + u * Math.PI * 2
-      const x = Math.cos(theta) * radius
-      const z = Math.sin(theta) * radius
-      positions.push(x, localY, z)
-      normals.push(Math.cos(theta), 0, Math.sin(theta))
-      uvs.push(1 - u, v)
-    }
-  }
-
-  const row = radialSegments + 1
-  for (let yStep = 0; yStep < heightSegments; yStep++) {
-    for (let xStep = 0; xStep < radialSegments; xStep++) {
-      const a = yStep * row + xStep
-      const b = a + row
-      indices.push(a, b, a + 1, b, b + 1, a + 1)
-    }
-  }
-
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
-  geo.setIndex(indices)
-  return geo
-}
-
-function sampleLabelRadius(y) {
-  if (!labelRadiusProfile) return bodyRadius
-  const { minY, maxY, radii } = labelRadiusProfile
-  const t = THREE.MathUtils.clamp((y - minY) / Math.max(0.0001, maxY - minY), 0, 1)
-  const p = t * (radii.length - 1)
-  const i = Math.floor(p)
-  const f = p - i
-  return THREE.MathUtils.lerp(radii[i], radii[Math.min(i + 1, radii.length - 1)], f)
-}
-
-function addTopPart(group, mesh, y, x = 0, z = 0) {
-  mesh.position.set(x, y, z)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
-  group.add(mesh)
-  return mesh
-}
-
-function createPullTabShape(width, height, holeWidth, holeHeight) {
-  const shape = new THREE.Shape()
-  shape.absellipse(0, 0, width * 0.5, height * 0.5, 0, Math.PI * 2)
-  const hole = new THREE.Path()
-  hole.absellipse(0, height * 0.08, holeWidth * 0.5, holeHeight * 0.5, 0, Math.PI * 2)
-  shape.holes.push(hole)
-  return shape
-}
-
-function rebuildCanTop() {
-  if (topAssembly) {
-    root.remove(topAssembly)
-    topAssembly.traverse(child => {
-      if (child.geometry) child.geometry.dispose()
-      if (child.material && child.material !== canMaterial && child.material !== lidMaterial) child.material.dispose()
-    })
-  }
-
-  const group = new THREE.Group()
-  const topY = canCenter.y + canHeight * 0.5 - canHeight * 0.018
-  const r = bodyRadius * 0.92
-  const darkMaterial = new THREE.MeshBasicMaterial({ color: 0x030303 })
-
-  const lid = addTopPart(group, new THREE.Mesh(
-    new THREE.CylinderGeometry(r * 0.91, r * 0.96, 0.055, 256),
-    lidMaterial
-  ), topY)
-
-  const outerRim = new THREE.Mesh(new THREE.TorusGeometry(r * 0.965, r * 0.032, 24, 256), lidMaterial)
-  outerRim.rotation.x = Math.PI / 2
-  addTopPart(group, outerRim, topY + 0.035)
-
-  const innerRim = new THREE.Mesh(new THREE.TorusGeometry(r * 0.78, r * 0.018, 18, 220), lidMaterial)
-  innerRim.rotation.x = Math.PI / 2
-  addTopPart(group, innerRim, topY + 0.052)
-
-  const dishRing = new THREE.Mesh(new THREE.TorusGeometry(r * 0.55, r * 0.014, 16, 180), lidMaterial)
-  dishRing.scale.z = 0.72
-  dishRing.rotation.x = Math.PI / 2
-  dishRing.rotation.z = -0.16
-  addTopPart(group, dishRing, topY + 0.065, -r * 0.08, -r * 0.08)
-
-  const score = new THREE.Mesh(
-    new THREE.CapsuleGeometry(r * 0.075, r * 0.48, 14, 36),
-    darkMaterial
-  )
-  score.rotation.x = Math.PI / 2
-  score.rotation.z = Math.PI / 2
-  score.scale.x = 1.7
-  addTopPart(group, score, topY + 0.071, -r * 0.03, -r * 0.36)
-
-  const tabGeo = new THREE.ExtrudeGeometry(
-    createPullTabShape(r * 0.48, r * 0.92, r * 0.22, r * 0.42),
-    { depth: 0.035, bevelEnabled: true, bevelSegments: 5, bevelSize: 0.012, bevelThickness: 0.012 }
-  )
-  tabGeo.center()
-  const tab = new THREE.Mesh(tabGeo, lidMaterial)
-  tab.rotation.x = -Math.PI / 2
-  tab.rotation.z = -0.18
-  addTopPart(group, tab, topY + 0.105, r * 0.02, r * 0.05)
-
-  const rivet = new THREE.Mesh(
-    new THREE.CylinderGeometry(r * 0.105, r * 0.13, 0.055, 80),
-    lidMaterial
-  )
-  addTopPart(group, rivet, topY + 0.14, r * 0.02, -r * 0.05)
-
-  const embossMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    metalness: 0.8,
-    roughness: 0.5,
-    envMapIntensity: 0.55,
-    transparent: true,
-    opacity: 0.28,
-  })
-  for (let i = 0; i < 12; i++) {
-    const dot = new THREE.Mesh(new THREE.BoxGeometry(r * 0.018, 0.007, r * 0.018), embossMaterial)
-    const col = i % 3
-    const row = Math.floor(i / 3)
-    addTopPart(group, dot, topY + 0.075, r * (0.11 + col * 0.045), r * (-0.50 + row * 0.045))
-  }
-
-  lid.renderOrder = 2
-  group.position.set(canCenter.x, 0, canCenter.z)
-  topAssembly = group
-  root.add(group)
-}
-
-function frameCan(scaledBox, scaledSize) {
+function frameCup(scaledBox, scaledSize) {
   const radius = Math.max(scaledSize.x, scaledSize.z) * 0.5
-  const distance = Math.max(7.2, canHeight * 1.35, radius * 4.8)
+  const distance = Math.max(6.4, cupHeight * 1.28, radius * 4.6)
   floor.position.y = scaledBox.min.y - 0.025
-  controls.target.copy(canCenter)
-  camera.position.set(canCenter.x, canCenter.y + canHeight * 0.08, canCenter.z + distance)
+  controls.target.copy(cupCenter)
+  camera.position.set(cupCenter.x, cupCenter.y + cupHeight * 0.08, cupCenter.z + distance)
   controls.update()
 }
 
-function buildLabelRadiusProfile(object, scaledBox) {
-  const segments = 180
-  const bins = Array.from({ length: segments }, () => [])
-  const minY = scaledBox.min.y
-  const maxY = scaledBox.max.y
-  const p = new THREE.Vector3()
-
-  object.updateWorldMatrix(true, true)
-  object.traverse(child => {
-    if (!child.isMesh || !child.geometry?.attributes?.position) return
-    const attr = child.geometry.attributes.position
-    for (let i = 0; i < attr.count; i++) {
-      p.fromBufferAttribute(attr, i)
-      child.localToWorld(p)
-      const t = (p.y - minY) / Math.max(0.0001, maxY - minY)
-      const bin = Math.max(0, Math.min(segments - 1, Math.floor(t * segments)))
-      bins[bin].push(Math.hypot(p.x - canCenter.x, p.z - canCenter.z))
-    }
-  })
-
-  let last = bodyRadius
-  const radii = bins.map(values => {
-    if (!values.length) return last
-    values.sort((a, b) => a - b)
-    last = values[Math.floor(values.length * 0.94)]
-    return last
-  })
-
-  for (let pass = 0; pass < 3; pass++) {
-    for (let i = 1; i < radii.length - 1; i++) {
-      radii[i] = radii[i - 1] * 0.24 + radii[i] * 0.52 + radii[i + 1] * 0.24
-    }
-  }
-
-  return { minY, maxY, radii }
-}
-
-function normalizeCan(object) {
+function normalizeCup(object) {
   const box = new THREE.Box3().setFromObject(object)
   const size = box.getSize(new THREE.Vector3())
   const center = box.getCenter(new THREE.Vector3())
@@ -702,54 +463,52 @@ function normalizeCan(object) {
   object.scale.setScalar(scale)
   const scaledBox = new THREE.Box3().setFromObject(object)
   const scaledSize = scaledBox.getSize(new THREE.Vector3())
-  canHeight = scaledSize.y
-  canRadius = Math.max(scaledSize.x, scaledSize.z) * 0.5
-  bodyRadius = canRadius
-  scaledBox.getCenter(canCenter)
-  canCenterY = canCenter.y
-  labelRadiusProfile = modelHasUvLabel ? null : buildLabelRadiusProfile(object, scaledBox)
-  frameCan(scaledBox, scaledSize)
+  cupHeight = scaledSize.y
+  cupRadius = Math.max(scaledSize.x, scaledSize.z) * 0.5
+  scaledBox.getCenter(cupCenter)
+  frameCup(scaledBox, scaledSize)
 }
 
-function createFallbackCan() {
-  const group = new THREE.Group()
-  const body = new THREE.Mesh(
-    new THREE.CylinderGeometry(1, 1, 4.1, 192, 1, false),
-    canMaterial
-  )
-  body.castShadow = true
-  body.receiveShadow = true
-  group.add(body)
+function prepareSleeveGeometry(mesh) {
+  const source = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone()
+  source.computeBoundingBox()
+  const box = source.boundingBox
+  const positions = source.attributes.position
+  const uvs = new Float32Array(positions.count * 2)
+  const height = Math.max(0.0001, box.max.y - box.min.y)
+  const triU = [0, 0, 0]
+  const triV = [0, 0, 0]
 
-  const top = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.96, 1.01, 0.16, 192),
-    lidMaterial
-  )
-  top.position.y = 2.08
-  top.castShadow = true
-  top.receiveShadow = true
-  group.add(top)
+  for (let i = 0; i < positions.count; i += 3) {
+    for (let j = 0; j < 3; j++) {
+      const index = i + j
+      const x = positions.getX(index)
+      const y = positions.getY(index)
+      const z = positions.getZ(index)
+      const angle = Math.atan2(z, x)
+      triU[j] = 1 - ((angle + Math.PI) / (Math.PI * 2))
+      triV[j] = (y - box.min.y) / height
+    }
 
-  const bottom = top.clone()
-  bottom.position.y = -2.08
-  group.add(bottom)
+    const minU = Math.min(triU[0], triU[1], triU[2])
+    const maxU = Math.max(triU[0], triU[1], triU[2])
+    if (maxU - minU > 0.5) {
+      for (let j = 0; j < 3; j++) {
+        if (triU[j] < 0.5) triU[j] += 1
+      }
+    }
 
-  canObject = group
-  modelHasUvLabel = false
-  root.add(group)
-  canHeight = 4.16
-  canRadius = 1
-  bodyRadius = 1
-  canCenterY = 0
-  canCenter.set(0, 0, 0)
-  labelRadiusProfile = null
-  floor.position.y = -2.18
-  controls.target.set(0, 0, 0)
-  camera.position.set(0, 0.35, 7.2)
-  controls.update()
-  rebuildCanTop()
-  rebuildLabelTexture()
-  updateLabelMesh()
+    for (let j = 0; j < 3; j++) {
+      const index = i + j
+      uvs[index * 2] = triU[j]
+      uvs[index * 2 + 1] = triV[j]
+    }
+  }
+
+  source.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
+  if (!source.attributes.normal) source.computeVertexNormals()
+  mesh.geometry.dispose()
+  mesh.geometry = source
 }
 
 function disposeSceneObject(object) {
@@ -758,74 +517,35 @@ function disposeSceneObject(object) {
   })
 }
 
-function clearCanScene() {
-  if (canObject) {
-    root.remove(canObject)
-    disposeSceneObject(canObject)
-    canObject = null
-  }
-  if (labelMesh) {
-    root.remove(labelMesh)
-    labelMesh.geometry.dispose()
-    labelMesh = null
-  }
-  if (topAssembly) {
-    root.remove(topAssembly)
-    disposeSceneObject(topAssembly)
-    topAssembly = null
-  }
-  labelRadiusProfile = null
-}
-
-function setActiveModel(modelKey) {
-  currentModelKey = modelKey
-  const model = CAN_MODELS[modelKey]
-  currentLabelWidth = model.width
-  currentLabelHeight = model.height
-  currentLabelBodyRatio = model.bodyRatio
-  $('uploadSpec').textContent = `${model.width} x ${model.height} px`
-  $('wrapFile').value = ''
-  document.querySelectorAll('.model-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.model === modelKey)
-  })
-  applyModelWrap(modelKey)
-}
-
-function loadCan(modelKey = currentModelKey) {
-  const model = CAN_MODELS[modelKey]
-  setActiveModel(modelKey)
-  clearCanScene()
-  $('loading').textContent = 'Loading Can'
+function loadCup() {
+  $('loading').textContent = 'Loading Cup'
   $('loading').classList.remove('hidden')
   new GLTFLoader().load(
-    model.url,
+    MODEL_URL,
     gltf => {
       const object = gltf.scene
-      canObject = object
-      modelHasUvLabel = model.uvLabel
+      cupObject = object
       object.traverse(child => {
         if (!child.isMesh) return
         const materialName = child.material?.name?.toLowerCase() || ''
         const meshName = child.name.toLowerCase()
-        const isLabelPart = materialName.includes('label') || meshName.includes('circle_0')
-        child.material = model.uvLabel && isLabelPart ? labelMaterial : lidMaterial
+        const isSleeve = materialName.includes('sleeve') || meshName.includes('sleeve')
+        const isLid = materialName.includes('material_1') || meshName.includes('lid')
+        if (isSleeve) prepareSleeveGeometry(child)
+        child.material = isSleeve ? labelMaterial : (isLid ? lidMaterial : cupMaterial)
         child.castShadow = true
         child.receiveShadow = true
         if (!child.geometry.attributes.normal) child.geometry.computeVertexNormals()
       })
-      normalizeCan(object)
+      normalizeCup(object)
       root.add(object)
       rebuildLabelTexture()
-      updateLabelMesh()
       $('loading').classList.add('hidden')
     },
     undefined,
     error => {
       console.error(error)
-      $('loading').textContent = 'Using fallback can'
-      modelHasUvLabel = false
-      createFallbackCan()
-      setTimeout(() => $('loading').classList.add('hidden'), 350)
+      $('loading').textContent = 'Model failed'
     }
   )
 }
@@ -840,19 +560,18 @@ function bindSlider(id, valueId, decimals, apply) {
   })
 }
 
-bindSlider('metalness', 'metalnessVal', 2, v => {
-  canMaterial.metalness = v
-  lidMaterial.metalness = v
+bindSlider('paper', 'paperVal', 2, v => {
+  cupMaterial.clearcoat = v * 0.24
+  cupMaterial.envMapIntensity = 0.12 + v * 0.42
 })
 bindSlider('roughness', 'roughnessVal', 2, v => {
-  canMaterial.roughness = v
+  cupMaterial.roughness = v
   lidMaterial.roughness = v
 })
 bindSlider('shine', 'shineVal', 2, v => {
-  canMaterial.envMapIntensity = v
-  canMaterial.clearcoat = Math.min(1, v / 1.4)
   lidMaterial.envMapIntensity = v
   lidMaterial.clearcoat = Math.min(1, v / 1.4)
+  cupMaterial.envMapIntensity = v * 0.72
 })
 bindSlider('labelGloss', 'labelGlossVal', 2, v => {
   labelMaterial.clearcoat = v
@@ -873,9 +592,8 @@ function setSceneBackground(hex) {
 }
 
 $('bgColor').addEventListener('input', e => setSceneBackground(e.target.value))
-document.querySelectorAll('.model-btn').forEach(btn => {
-  btn.addEventListener('click', () => loadCan(btn.dataset.model))
-})
+$('cupColor').addEventListener('input', e => cupMaterial.color.set(e.target.value))
+$('lidColor').addEventListener('input', e => lidMaterial.color.set(e.target.value))
 
 function readImage(file, assign) {
   if (!file) return
@@ -883,65 +601,28 @@ function readImage(file, assign) {
   img.onload = () => {
     assign(img)
     rebuildLabelTexture()
-    updateLabelMesh()
   }
   img.src = URL.createObjectURL(file)
 }
 
-function applyModelWrap(modelKey) {
-  const storedWrap = modelWrapImages[modelKey]
-  if (storedWrap !== undefined) {
-    wrapImage = storedWrap
-    rebuildLabelTexture()
-    updateLabelMesh()
-    return
-  }
-  loadDefaultWrap(modelKey)
-}
-
-function loadDefaultWrap(modelKey = currentModelKey) {
-  const model = CAN_MODELS[modelKey]
-  if (defaultWrapCache[modelKey]) {
-    modelWrapImages[modelKey] = defaultWrapCache[modelKey]
-    if (modelKey === currentModelKey) {
-      wrapImage = defaultWrapCache[modelKey]
-      rebuildLabelTexture()
-      updateLabelMesh()
-    }
-    return
-  }
-  const img = new Image()
-  img.onload = () => {
-    defaultWrapCache[modelKey] = img
-    modelWrapImages[modelKey] = img
-    if (modelKey === currentModelKey) {
-      wrapImage = img
-      rebuildLabelTexture()
-      updateLabelMesh()
-    }
-  }
-  img.src = model.defaultWrap
-}
-
 $('uploadWrapBtn').addEventListener('click', () => $('wrapFile').click())
 $('wrapFile').addEventListener('change', e => readImage(e.target.files[0], img => {
-  modelWrapImages[currentModelKey] = img
+  useDefaultArtwork = false
   wrapImage = img
 }))
 $('clearWrapBtn').addEventListener('click', () => {
-  modelWrapImages[currentModelKey] = null
+  useDefaultArtwork = false
   wrapImage = null
   $('wrapFile').value = ''
   rebuildLabelTexture()
-  updateLabelMesh()
 })
 
 $('resetBtn').addEventListener('click', () => {
   root.rotation.set(0, 0, 0)
   setSlider('tilt', 0, 2)
-  const distance = Math.max(7.2, canHeight * 1.35, bodyRadius * 4.8)
-  camera.position.set(canCenter.x, canCenter.y + canHeight * 0.08, canCenter.z + distance)
-  controls.target.copy(canCenter)
+  const distance = Math.max(6.4, cupHeight * 1.28, cupRadius * 4.6)
+  camera.position.set(cupCenter.x, cupCenter.y + cupHeight * 0.08, cupCenter.z + distance)
+  controls.target.copy(cupCenter)
   controls.update()
 })
 
@@ -975,7 +656,7 @@ function exportImage(format, targetHeight) {
   renderer.setPixelRatio(1)
   renderer.setSize(width, targetHeight, false)
   renderer.render(scene, camera)
-  downloadUrl(renderer.domElement.toDataURL(mime, 0.92), `3d-can-editor-${targetHeight}p.${ext}`)
+  downloadUrl(renderer.domElement.toDataURL(mime, 0.92), `coffee-cup-editor-${targetHeight}p.${ext}`)
   scene.background = originalBackground
   floor.visible = originalFloorVisible
   renderer.setPixelRatio(originalPixelRatio)
@@ -992,7 +673,7 @@ function exportGlb() {
         ? new Blob([result], { type: 'model/gltf-binary' })
         : new Blob([JSON.stringify(result)], { type: 'model/gltf+json' })
       const url = URL.createObjectURL(blob)
-      downloadUrl(url, result instanceof ArrayBuffer ? '3d-can-editor.glb' : '3d-can-editor.gltf')
+      downloadUrl(url, result instanceof ArrayBuffer ? 'coffee-cup-editor.glb' : 'coffee-cup-editor.gltf')
       URL.revokeObjectURL(url)
     },
     error => console.error(error),
@@ -1034,7 +715,7 @@ function animate() {
   renderer.render(scene, camera)
 }
 
-loadCan()
+loadCup()
 animate()
 </script>
 <script src="/gate.js" defer></script>

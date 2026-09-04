@@ -209,11 +209,11 @@
     <div class="export-wrap" id="exportWrap">
       <button id="exportBtn">Export ▾</button>
       <div class="export-menu" id="exportMenu">
-        <button class="export-opt" data-action="framer">Framer Code</button>
+        <button class="export-opt" data-action="framer" data-fxkits-export>Framer Code</button>
         <div class="export-sep"></div>
-        <button class="export-opt" data-action="gltf">Export GLTF (.glb)</button>
-        <button class="export-opt" data-action="obj">Export OBJ + MTL</button>
-        <button class="export-opt" data-action="png">Export PNG (transparent)</button>
+        <button class="export-opt" data-action="gltf" data-fxkits-export>Export GLTF (.glb)</button>
+        <button class="export-opt" data-action="obj" data-fxkits-export>Export OBJ + MTL</button>
+        <button class="export-opt" data-action="png" data-fxkits-export>Export PNG (transparent)</button>
       </div>
     </div>
   </div>
@@ -1822,5 +1822,6 @@ function showLoading(on) {
   composer.render()
 })()
 </script>
+<script src="/gate.js" defer></script>
 </body>
 </html>

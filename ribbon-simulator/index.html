@@ -148,7 +148,7 @@
     <button id="uploadBtn" onclick="document.getElementById('imageFile').click()">Upload Image</button>
     <input type="file" id="imageFile" accept="image/png,image/jpeg,image/webp,image/gif">
     <div class="sep"></div>
-    <button id="exportBtn">Export PNG</button>
+    <button id="exportBtn" data-fxkits-export>Export PNG</button>
   </div>
 
   <div id="panel">
@@ -501,5 +501,6 @@ $('exportBtn').addEventListener('click', () => {
 
 loadDefaultImage();
 </script>
+<script src="/gate.js" defer></script>
 </body>
 </html>
