@@ -4,7 +4,8 @@
 
   let pendingElement = null
   let modal = null
-  let input = null
+  let nameInput = null
+  let emailInput = null
   let error = null
   let submitting = false
 
@@ -55,8 +56,8 @@
       }
       .fxkits-gate-form {
         display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 9px;
+        grid-template-columns: 1fr;
+        gap: 10px;
       }
       .fxkits-gate-input {
         min-width: 0;
@@ -82,14 +83,17 @@
         cursor: pointer;
       }
       .fxkits-gate-submit:hover { background: rgba(255,255,255,0.18); }
+      .fxkits-gate-consent {
+        margin: -1px 0 0;
+        color: rgba(255,255,255,0.42);
+        font-size: 11px;
+        line-height: 1.35;
+      }
       .fxkits-gate-error {
         min-height: 16px;
         margin-top: 8px;
         color: #ff9b9b;
         font-size: 11px;
-      }
-      @media (max-width: 420px) {
-        .fxkits-gate-form { grid-template-columns: 1fr; }
       }
     `
     document.head.appendChild(style)
@@ -100,15 +104,18 @@
       <div class="fxkits-gate-card" role="dialog" aria-modal="true" aria-label="Export email">
         <p class="fxkits-gate-copy">Enter your email once to export from FXKits.</p>
         <form class="fxkits-gate-form">
-          <input class="fxkits-gate-input" type="email" name="email" autocomplete="email" placeholder="email@example.com" required>
+          <input class="fxkits-gate-input" type="text" name="name" autocomplete="name" placeholder="Name">
+          <input class="fxkits-gate-input" type="email" name="email" autocomplete="email" placeholder="Email" required>
           <button class="fxkits-gate-submit" type="submit">Continue</button>
+          <p class="fxkits-gate-consent">Your email unlocks exports on every fxkits tool. You will also get occasional emails about new tools and design work. Unsubscribe anytime.</p>
         </form>
         <div class="fxkits-gate-error" aria-live="polite"></div>
       </div>
     `
     document.body.appendChild(modal)
 
-    input = modal.querySelector('input')
+    nameInput = modal.querySelector('input[name="name"]')
+    emailInput = modal.querySelector('input[name="email"]')
     error = modal.querySelector('.fxkits-gate-error')
 
     modal.addEventListener('click', event => {
@@ -119,21 +126,25 @@
       event.preventDefault()
       if (submitting) return
 
-      const email = input.value.trim()
+      const name = nameInput.value.trim()
+      const email = emailInput.value.trim()
       error.textContent = ''
 
       if (!isValidEmail(email)) {
         error.textContent = 'Use a valid email address.'
-        input.focus()
+        emailInput.focus()
         return
       }
+
+      const payload = { email }
+      if (name) payload.name = name
 
       submitting = true
       try {
         await fetch('/api/subscribe.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
+          body: JSON.stringify(payload)
         })
       } catch (_) {
         // Export should keep working even when lead capture fails.
@@ -155,9 +166,10 @@
     ensureModal()
     pendingElement = element
     error.textContent = ''
-    input.value = ''
+    nameInput.value = ''
+    emailInput.value = ''
     modal.classList.add('open')
-    requestAnimationFrame(() => input.focus())
+    requestAnimationFrame(() => nameInput.focus())
   }
 
   function closeModal() {

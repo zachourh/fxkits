@@ -109,6 +109,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $raw = file_get_contents('php://input');
 $data = json_decode((string) $raw, true);
 $email = is_array($data) ? trim((string) ($data['email'] ?? '')) : '';
+$name = is_array($data) ? trim((string) ($data['name'] ?? '')) : '';
+$name = preg_replace('/[[:cntrl:]]/', '', $name);
+$name = substr($name, 0, 80);
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
     respond(false, 400);
@@ -127,7 +130,12 @@ if ($apiKey === '' || $apiKey === 'PASTE_HERE' || $tagId <= 0) {
 }
 
 $payload = ['email_address' => $email];
-$subscriber = kit_post('/subscribers', $payload, $apiKey);
+$subscriberPayload = $payload;
+if ($name !== '') {
+    $subscriberPayload['first_name'] = $name;
+}
+
+$subscriber = kit_post('/subscribers', $subscriberPayload, $apiKey);
 if (!$subscriber['ok']) {
     respond(false, 502);
 }
