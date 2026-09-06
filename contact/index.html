@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-NHE9S3ML7D"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-NHE9S3ML7D');
+</script>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<title>Contact - FXKits</title>
+<meta name="description" content="Contact the FXKits team with questions, feedback, and collaboration ideas.">
+<meta property="og:title" content="Contact - FXKits">
+<meta property="og:description" content="Have a question or feedback? We'd love to hear from you.">
+<meta property="og:image" content="https://fxkits.io/og-image.jpg">
+<meta property="og:url" content="https://fxkits.io/contact/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://fxkits.io/og-image.jpg">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  background: #111;
+  color: #f4f4f4;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+main {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: 52px 24px 72px;
+}
+
+.logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 42px;
+}
+
+.logo img {
+  height: 15px;
+  width: auto;
+  filter: invert(1);
+}
+
+.intro {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+h1 {
+  color: #fff;
+  font-size: 58px;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+
+.subheading {
+  margin-top: 18px;
+  color: #cfcfcf;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.contact-form {
+  display: grid;
+  gap: 22px;
+}
+
+.field {
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 26px;
+  background: #2b2b2b;
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  padding: 18px 20px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+textarea {
+  min-height: 156px;
+  resize: vertical;
+  border-radius: 24px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #c7c7c7;
+}
+
+input:focus,
+textarea:focus {
+  border-color: rgba(255,255,255,0.28);
+  background: #303030;
+}
+
+button {
+  margin-top: 4px;
+  border: 0;
+  border-radius: 28px;
+  background: #f4f4f4;
+  color: #050505;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 18px 24px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+
+button:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.back {
+  display: inline-flex;
+  margin-top: 30px;
+  color: #9a9a9a;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.back:hover { color: #fff; }
+
+@media (max-width: 700px) {
+  main {
+    padding-top: 42px;
+  }
+
+  h1 {
+    font-size: 42px;
+  }
+
+  .subheading {
+    font-size: 16px;
+  }
+
+  input,
+  textarea,
+  button {
+    font-size: 15px;
+  }
+}
+</style>
+</head>
+<body>
+<main>
+  <a class="logo" href="../" aria-label="FXKits home">
+    <img src="../logo.svg" alt="FXKits">
+  </a>
+
+  <section class="intro">
+    <h1>Contact Our Team</h1>
+    <p class="subheading">Have a question or feedback? We'd love to hear from you.</p>
+  </section>
+
+  <form class="contact-form" id="contactForm">
+    <div class="field">
+      <label for="name">Name</label>
+      <input id="name" name="name" type="text" autocomplete="name" placeholder="Your name" required>
+    </div>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" placeholder="your@email.com" required>
+    </div>
+
+    <div class="field">
+      <label for="message">Message</label>
+      <textarea id="message" name="message" placeholder="What can we help you with?" required></textarea>
+    </div>
+
+    <button type="submit">Send Message</button>
+  </form>
+
+  <a class="back" href="../">Back to FXKits</a>
+</main>
+
+<script>
+document.getElementById('contactForm').addEventListener('submit', event => {
+  event.preventDefault()
+  const form = event.currentTarget
+  const name = form.elements.name.value.trim()
+  const email = form.elements.email.value.trim()
+  const message = form.elements.message.value.trim()
+  const subject = encodeURIComponent('FXKits contact message')
+  const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\n${message}`)
+  window.location.href = `mailto:hello@fxkits.io?subject=${subject}&body=${body}`
+})
+</script>
+</body>
+</html>
