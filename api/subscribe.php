@@ -27,6 +27,7 @@ function read_config(): array
     return [
         'api_key' => getenv('KIT_API_KEY') ?: ($config['KIT_API_KEY'] ?? ''),
         'tag_id' => getenv('KIT_TAG_ID') ?: ($config['KIT_TAG_ID'] ?? ''),
+        'role_tags' => is_array($config['KIT_ROLE_TAGS'] ?? null) ? $config['KIT_ROLE_TAGS'] : [],
     ];
 }
 
@@ -110,6 +111,7 @@ $raw = file_get_contents('php://input');
 $data = json_decode((string) $raw, true);
 $email = is_array($data) ? trim((string) ($data['email'] ?? '')) : '';
 $name = is_array($data) ? trim((string) ($data['name'] ?? '')) : '';
+$role = is_array($data) ? trim((string) ($data['role'] ?? '')) : '';
 $name = preg_replace('/[[:cntrl:]]/', '', $name);
 $name = substr($name, 0, 80);
 
@@ -124,6 +126,14 @@ if (rate_limited(client_ip())) {
 $config = read_config();
 $apiKey = trim((string) $config['api_key']);
 $tagId = (int) $config['tag_id'];
+$roleTags = $config['role_tags'];
+$allowedRoles = [
+    'Student or learning',
+    'Freelance designer',
+    'I run a small studio',
+    'Not a designer',
+];
+$roleTagId = in_array($role, $allowedRoles, true) ? (int) ($roleTags[$role] ?? 0) : 0;
 
 if ($apiKey === '' || $apiKey === 'PASTE_HERE' || $tagId <= 0) {
     respond(false, 500);
@@ -148,6 +158,10 @@ if (!$form['ok']) {
 $tag = kit_post('/tags/' . $tagId . '/subscribers', $payload, $apiKey);
 if (!$tag['ok']) {
     respond(false, 502);
+}
+
+if ($roleTagId > 0) {
+    kit_post('/tags/' . $roleTagId . '/subscribers', $payload, $apiKey);
 }
 
 respond(true);

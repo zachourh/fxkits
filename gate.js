@@ -6,6 +6,7 @@
   let modal = null
   let nameInput = null
   let emailInput = null
+  let roleInput = null
   let error = null
   let submitting = false
 
@@ -72,6 +73,22 @@
       }
       .fxkits-gate-input:focus { border-color: rgba(255,255,255,0.34); }
       .fxkits-gate-input::placeholder { color: rgba(255,255,255,0.34); }
+      .fxkits-gate-field {
+        display: grid;
+        gap: 6px;
+      }
+      .fxkits-gate-label {
+        color: rgba(255,255,255,0.52);
+        font-size: 11px;
+        line-height: 1.2;
+      }
+      .fxkits-gate-select {
+        appearance: none;
+        background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.58) 50%), linear-gradient(135deg, rgba(255,255,255,0.58) 50%, transparent 50%);
+        background-position: calc(100% - 17px) 16px, calc(100% - 12px) 16px;
+        background-size: 5px 5px, 5px 5px;
+        background-repeat: no-repeat;
+      }
       .fxkits-gate-submit {
         border: 1px solid rgba(255,255,255,0.16);
         border-radius: 9px;
@@ -106,6 +123,15 @@
         <form class="fxkits-gate-form">
           <input class="fxkits-gate-input" type="text" name="name" autocomplete="name" placeholder="Name">
           <input class="fxkits-gate-input" type="email" name="email" autocomplete="email" placeholder="Email" required>
+          <label class="fxkits-gate-field">
+            <span class="fxkits-gate-label">What best describes you?</span>
+            <select class="fxkits-gate-input fxkits-gate-select" name="role" required>
+              <option value="Student or learning" selected>Student or learning</option>
+              <option value="Freelance designer">Freelance designer</option>
+              <option value="I run a small studio">I run a small studio</option>
+              <option value="Not a designer">Not a designer</option>
+            </select>
+          </label>
           <button class="fxkits-gate-submit" type="submit">Continue</button>
           <p class="fxkits-gate-consent">Your email unlocks exports on every fxkits tool. You will also get occasional emails about new tools and design work. Unsubscribe anytime.</p>
         </form>
@@ -116,6 +142,7 @@
 
     nameInput = modal.querySelector('input[name="name"]')
     emailInput = modal.querySelector('input[name="email"]')
+    roleInput = modal.querySelector('select[name="role"]')
     error = modal.querySelector('.fxkits-gate-error')
 
     modal.addEventListener('click', event => {
@@ -128,6 +155,7 @@
 
       const name = nameInput.value.trim()
       const email = emailInput.value.trim()
+      const role = roleInput.value
       error.textContent = ''
 
       if (!isValidEmail(email)) {
@@ -138,6 +166,7 @@
 
       const payload = { email }
       if (name) payload.name = name
+      if (role) payload.role = role
 
       submitting = true
       try {
@@ -168,6 +197,7 @@
     error.textContent = ''
     nameInput.value = ''
     emailInput.value = ''
+    roleInput.value = 'Student or learning'
     modal.classList.add('open')
     requestAnimationFrame(() => nameInput.focus())
   }
