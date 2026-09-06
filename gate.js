@@ -84,10 +84,25 @@
       }
       .fxkits-gate-select {
         appearance: none;
-        background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.58) 50%), linear-gradient(135deg, rgba(255,255,255,0.58) 50%, transparent 50%);
+        background-color: rgba(255,255,255,0.08);
+        background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.72) 50%), linear-gradient(135deg, rgba(255,255,255,0.72) 50%, transparent 50%);
         background-position: calc(100% - 17px) 16px, calc(100% - 12px) 16px;
         background-size: 5px 5px, 5px 5px;
         background-repeat: no-repeat;
+        color: #fff;
+        cursor: pointer;
+      }
+      .fxkits-gate-select:hover {
+        background-color: rgba(255,255,255,0.12);
+      }
+      .fxkits-gate-select option {
+        background: #242426;
+        color: #f4f4f4;
+      }
+      .fxkits-gate-select option:checked,
+      .fxkits-gate-select option:hover {
+        background: #3a3a3d;
+        color: #fff;
       }
       .fxkits-gate-submit {
         border: 1px solid rgba(255,255,255,0.16);
