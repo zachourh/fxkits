@@ -180,6 +180,20 @@
     style.textContent = `
       .fxkits-copy-link {
         white-space: nowrap;
+        cursor: pointer;
+      }
+      button.fxkits-copy-link:not([class*="btn"]):not([class*="export"]):not([class*="option"]) {
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 8px;
+        background: rgba(255,255,255,0.08);
+        color: rgba(255,255,255,0.86);
+        font: inherit;
+        font-size: 12px;
+        padding: 8px 13px;
+      }
+      button.fxkits-copy-link:not([class*="btn"]):not([class*="export"]):not([class*="option"]):hover {
+        background: rgba(255,255,255,0.14);
+        color: #fff;
       }
       .fxkits-share-note {
         margin: 8px 0 0;
@@ -220,7 +234,7 @@
     const button = document.createElement('button')
     const exportButton = panel.querySelector('[data-fxkits-export], [id*="export" i], [class*="export" i]')
     button.type = 'button'
-    button.textContent = 'Copy link'
+    button.textContent = 'Copy preset link'
     button.className = exportButton && exportButton.className ? exportButton.className : 'fxkits-copy-link'
     button.classList.add('fxkits-copy-link')
     button.addEventListener('click', () => copyLink(button))
