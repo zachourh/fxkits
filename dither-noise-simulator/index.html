@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
-<title>Ribbon Simulator</title>
+<title>Fisheye Effect</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #000; overflow: hidden; font-family: system-ui, sans-serif; }
@@ -12,17 +12,29 @@
   canvas { display: block; }
 
   #viewport {
-    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-    overflow: hidden; background: #000;
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #000;
   }
+
   #stage {
-    position: relative; cursor: grab; touch-action: none;
-    transform-origin: 0 0; will-change: transform;
+    position: relative;
+    cursor: grab;
+    touch-action: none;
+    transform-origin: 0 0;
+    will-change: transform;
   }
   #stage.dragging { cursor: grabbing; }
   #resultCanvas {
-    max-width: min(100vw, 1440px); max-height: min(100vh, 960px);
-    width: auto; height: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+    max-width: min(100vw, 1440px);
+    max-height: min(100vh, 960px);
+    width: auto;
+    height: auto;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.7);
   }
 
   #ui {
@@ -33,7 +45,8 @@
     padding: 13px 22px; z-index: 10;
   }
   #toolName {
-    color: #fff; font-size: 17px; font-weight: 600; letter-spacing: 0.08em; width: 200px;
+    color: #fff; font-size: 17px; font-weight: 600;
+    letter-spacing: 0.08em; width: 200px;
   }
   .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.1); flex-shrink: 0; }
 
@@ -44,7 +57,8 @@
   }
   .font-current:hover { color: rgba(255,255,255,0.7); }
   .font-menu {
-    position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+    position: absolute; bottom: calc(100% + 10px); left: 50%;
+    transform: translateX(-50%);
     background: #18181c; border: 1px solid rgba(255,255,255,0.1);
     border-radius: 13px; padding: 6px; min-width: 170px;
     display: none; flex-direction: column; gap: 2px; z-index: 30;
@@ -52,20 +66,41 @@
   }
   .font-menu.open { display: flex; }
   .font-opt {
-    padding: 9px 13px; border-radius: 8px; font-size: 13px; color: rgba(255,255,255,0.5);
+    padding: 9px 13px; border-radius: 8px;
+    font-size: 13px; color: rgba(255,255,255,0.5);
     cursor: pointer; transition: all 0.1s; white-space: nowrap;
   }
   .font-opt:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
   .font-opt.active { background: rgba(255,255,255,0.1); color: #fff; }
 
-  #uploadBtn, #exportBtn {
+  #uploadBtn,
+  #exportBtn {
     background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
     border-radius: 8px; color: rgba(255,255,255,0.55); font-size: 11px;
     letter-spacing: 0.05em; padding: 6px 13px; cursor: pointer; white-space: nowrap;
     transition: all 0.15s;
   }
-  #uploadBtn:hover, #exportBtn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  #uploadBtn:hover,
+  #exportBtn:hover { background: rgba(255,255,255,0.1); color: #fff; }
   #imageFile { display: none; }
+
+  .export-wrap { position: relative; display: inline-block; }
+  .export-menu {
+    position: absolute; bottom: calc(100% + 10px); right: 0;
+    background: #18181c; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 5px; min-width: 178px;
+    display: none; flex-direction: column; gap: 2px; z-index: 40;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.65);
+  }
+  .export-menu.open { display: flex; }
+  .export-opt {
+    padding: 9px 13px; border-radius: 8px; font-size: 12px;
+    color: rgba(255,255,255,0.5); cursor: pointer;
+    background: none; border: none; text-align: left;
+    transition: all 0.1s; white-space: nowrap;
+    letter-spacing: 0.03em; width: 100%;
+  }
+  .export-opt:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
 
   #panel {
     position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
@@ -83,7 +118,8 @@
   .ctrl-label span { color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
   input[type="range"] {
     -webkit-appearance: none; width: 100%; height: 2px;
-    background: rgba(255,255,255,0.12); border-radius: 2px; outline: none; cursor: pointer;
+    background: rgba(255,255,255,0.12); border-radius: 2px;
+    outline: none; cursor: pointer;
   }
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none; width: 12px; height: 12px;
@@ -100,6 +136,35 @@
   }
   .preset-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
   .preset-btn.active { border-color: rgba(255,255,255,0.25); color: #fff; background: rgba(255,255,255,0.09); }
+  .mini-btn {
+    width: 100%;
+    padding: 8px 11px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.58);
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mini-btn:hover {
+    background: rgba(255,255,255,0.09);
+    color: rgba(255,255,255,0.9);
+  }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .toggle-row .ctrl-label { flex: 1; }
+  .toggle-row input {
+    width: 16px;
+    height: 16px;
+    accent-color: #fff;
+    cursor: pointer;
+  }
 
   #hint {
     position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
@@ -132,15 +197,14 @@
   </div>
 
   <div id="ui">
-    <div id="toolName">Ribbon Simulator</div>
+    <div id="toolName">Fisheye Effect</div>
     <div class="sep"></div>
 
     <div class="font-selector" id="modeSelector">
-      <div class="font-current" id="modeCurrent">Glass Ribbons</div>
+      <div class="font-current" id="modeCurrent">Circular Lens</div>
       <div class="font-menu" id="modeMenu">
-        <div class="font-opt active" data-mode="glass">Glass Ribbons</div>
-        <div class="font-opt" data-mode="sharp">Sharp Slits</div>
-        <div class="font-opt" data-mode="soft">Soft Veil</div>
+        <div class="font-opt active" data-mode="lens">Circular Lens</div>
+        <div class="font-opt" data-mode="full">Full Frame</div>
       </div>
     </div>
 
@@ -148,42 +212,56 @@
     <button id="uploadBtn" onclick="document.getElementById('imageFile').click()">Upload Image</button>
     <input type="file" id="imageFile" accept="image/png,image/jpeg,image/webp,image/gif">
     <div class="sep"></div>
-    <button id="exportBtn" data-fxkits-export>Export PNG</button>
+    <div class="export-wrap" id="exportWrap">
+      <button id="exportBtn">Export v</button>
+      <div class="export-menu" id="exportMenu">
+        <button class="export-opt" data-action="png" data-fxkits-export>Export PNG</button>
+        <button class="export-opt" data-action="reset">Reset View</button>
+      </div>
+    </div>
   </div>
 
   <div id="panel">
     <div class="ctrl-row">
-      <div class="ctrl-label">Pieces <span id="piecesVal">54</span></div>
-      <input type="range" id="pieces" min="16" max="110" step="1" value="54">
+      <div class="ctrl-label">Strength <span id="strengthVal">0.58</span></div>
+      <input type="range" id="strength" min="-1" max="1" step="0.01" value="0.58">
     </div>
     <div class="ctrl-row">
-      <div class="ctrl-label">Strength <span id="strengthVal">0.64</span></div>
-      <input type="range" id="strength" min="0" max="1.2" step="0.01" value="0.64">
+      <div class="ctrl-label">Radius <span id="radiusVal">0.74</span></div>
+      <input type="range" id="radius" min="0.25" max="1.25" step="0.01" value="0.74">
     </div>
     <div class="ctrl-row">
-      <div class="ctrl-label">Glass <span id="glassVal">0.70</span></div>
-      <input type="range" id="glass" min="0" max="1" step="0.01" value="0.70">
+      <div class="ctrl-label">Zoom <span id="zoomCtrlVal">1.00</span></div>
+      <input type="range" id="zoomCtrl" min="0.55" max="1.8" step="0.01" value="1.00">
     </div>
     <div class="ctrl-row">
-      <div class="ctrl-label">Taper <span id="taperVal">0.44</span></div>
-      <input type="range" id="taper" min="0" max="0.9" step="0.01" value="0.44">
+      <div class="ctrl-label">X Center <span id="centerXVal">0.50</span></div>
+      <input type="range" id="centerX" min="0" max="1" step="0.01" value="0.50">
     </div>
     <div class="ctrl-row">
-      <div class="ctrl-label">Blur <span id="blurVal">0.36</span></div>
-      <input type="range" id="blur" min="0" max="1" step="0.01" value="0.36">
+      <div class="ctrl-label">Y Center <span id="centerYVal">0.50</span></div>
+      <input type="range" id="centerY" min="0" max="1" step="0.01" value="0.50">
     </div>
+    <button class="mini-btn" id="resetCenterBtn">Reset Center</button>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Vignette <span id="vignetteVal">0.24</span></div>
+      <input type="range" id="vignette" min="0" max="0.8" step="0.01" value="0.24">
+    </div>
+    <label class="toggle-row">
+      <div class="ctrl-label">Mask <span id="maskVal">On</span></div>
+      <input type="checkbox" id="maskEnabled" checked>
+    </label>
     <div class="panel-divider"></div>
     <div class="presets">
-      <button class="preset-btn active" data-preset="editorial">Editorial</button>
-      <button class="preset-btn" data-preset="portrait">Portrait</button>
-      <button class="preset-btn" data-preset="poster">Poster</button>
-      <button class="preset-btn" data-preset="fine">Fine Glass</button>
+      <button class="preset-btn active" data-preset="soft">Soft</button>
+      <button class="preset-btn" data-preset="wide">Wide</button>
+      <button class="preset-btn" data-preset="bubble">Bubble</button>
+      <button class="preset-btn" data-preset="pinch">Pinch</button>
     </div>
   </div>
 </div>
 
 <canvas id="sourceCanvas" style="display:none"></canvas>
-<canvas id="workCanvas" style="display:none"></canvas>
 
 <script>
 'use strict';
@@ -193,16 +271,14 @@ const MAX_SIDE = 1400;
 
 const $ = id => document.getElementById(id);
 const sourceCanvas = $('sourceCanvas');
-const workCanvas = $('workCanvas');
 const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
-const workCtx = workCanvas.getContext('2d', { willReadFrequently: true });
 const resultCanvas = $('resultCanvas');
 const resultCtx = resultCanvas.getContext('2d');
 const stageEl = $('stage');
 const modeCurrent = $('modeCurrent');
 const modeMenu = $('modeMenu');
 
-let mode = 'glass';
+let mode = 'lens';
 let sourceImage = null;
 let viewZoom = 1;
 let panX = 0;
@@ -213,14 +289,12 @@ let dragStartY = 0;
 let panStartX = 0;
 let panStartY = 0;
 let pending = false;
-let pendingScale = 1;
-let settleTimer = null;
 
 const presets = {
-  editorial: { pieces: 54, strength: 0.54, glass: 0.76, taper: 0.34, blur: 0.24 },
-  portrait:  { pieces: 42, strength: 0.62, glass: 0.88, taper: 0.20, blur: 0.18 },
-  poster:    { pieces: 68, strength: 0.86, glass: 0.70, taper: 0.42, blur: 0.30 },
-  fine:      { pieces: 92, strength: 0.38, glass: 0.92, taper: 0.12, blur: 0.12 },
+  soft:   { strength: 0.38, radius: 0.82, zoomCtrl: 1.00, vignette: 0.16 },
+  wide:   { strength: 0.72, radius: 1.05, zoomCtrl: 0.90, vignette: 0.20 },
+  bubble: { strength: 0.94, radius: 0.62, zoomCtrl: 1.08, vignette: 0.32 },
+  pinch:  { strength: -0.58, radius: 0.78, zoomCtrl: 1.04, vignette: 0.12 },
 };
 
 function clamp(v, lo, hi) {
@@ -231,19 +305,12 @@ function value(id) {
   return parseFloat($(id).value);
 }
 
-function scheduleRender(preview = false) {
-  pendingScale = preview ? 0.48 : 1;
-  if (preview) {
-    clearTimeout(settleTimer);
-    settleTimer = setTimeout(() => scheduleRender(false), 140);
-  }
+function scheduleRender() {
   if (pending) return;
   pending = true;
   requestAnimationFrame(() => {
     pending = false;
-    const scale = pendingScale;
-    pendingScale = 1;
-    render(scale);
+    render();
   });
 }
 
@@ -251,16 +318,16 @@ function setCanvasFromImage(img) {
   const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
   const w = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
   const h = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
-  sourceCanvas.width = workCanvas.width = resultCanvas.width = w;
-  sourceCanvas.height = workCanvas.height = resultCanvas.height = h;
+  sourceCanvas.width = resultCanvas.width = w;
+  sourceCanvas.height = resultCanvas.height = h;
   sourceCtx.clearRect(0, 0, w, h);
   sourceCtx.drawImage(img, 0, 0, w, h);
   sourceImage = sourceCtx.getImageData(0, 0, w, h);
   resetView();
-  scheduleRender(false);
+  scheduleRender();
 }
 
-function sample(data, w, h, x, y, out, i) {
+function sampleBilinear(data, w, h, x, y, out, i) {
   x = clamp(x, 0, w - 1);
   y = clamp(y, 0, h - 1);
   const x0 = Math.floor(x);
@@ -280,91 +347,68 @@ function sample(data, w, h, x, y, out, i) {
   }
 }
 
-function render(scale = 1) {
+function render() {
   if (!sourceImage) return;
+
   const w = sourceImage.width;
   const h = sourceImage.height;
-  const outW = Math.max(1, Math.round(w * scale));
-  const outH = Math.max(1, Math.round(h * scale));
-  resultCanvas.width = w;
-  resultCanvas.height = h;
-  resultCanvas.style.width = '';
-  resultCanvas.style.height = '';
-  workCanvas.width = outW;
-  workCanvas.height = outH;
-
   const src = sourceImage.data;
-  const output = resultCtx.createImageData(outW, outH);
+  const output = resultCtx.createImageData(w, h);
   const dst = output.data;
-  const pieces = Math.round(value('pieces'));
+
   const strength = value('strength');
-  const glass = value('glass');
-  const taper = value('taper');
-  const blurAmount = value('blur');
-  const cell = w / pieces;
+  const radius = value('radius') * Math.min(w, h) * 0.5;
+  const lensZoom = value('zoomCtrl');
+  const cx = value('centerX') * w;
+  const cy = value('centerY') * h;
+  const vignette = value('vignette');
+  const maskEnabled = $('maskEnabled').checked;
+  const edgeFeather = Math.max(1.5, Math.min(w, h) * 0.0025);
 
-  const modeBoost = mode === 'sharp' ? 1.22 : mode === 'soft' ? 0.72 : 1;
-  const ridgeContrast = mode === 'soft' ? 0.62 : 1;
-  const compression = mode === 'sharp' ? 0.22 : mode === 'soft' ? 0.54 : 0.36;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const dx = x - cx;
+      const dy = y - cy;
+      const d = Math.hypot(dx, dy);
+      const normalized = d / Math.max(1, radius);
 
-  for (let y = 0; y < outH; y++) {
-    const fy = y / scale;
-    const yn = fy / Math.max(1, h - 1);
+      let sx = x;
+      let sy = y;
+      let darken = 0;
+      let alphaScale = 1;
 
-    for (let x = 0; x < outW; x++) {
-      const fx = x / scale;
-      const column = clamp(Math.floor(fx / cell), 0, pieces - 1);
-      const baseCenter = (column + 0.5) * cell;
-      const phase = column * 0.47;
-      const center = baseCenter;
-      const half = cell * 0.5;
-      const local = clamp((fx - center) / Math.max(1, half), -1, 1);
-      const edge = Math.abs(local);
-      const lens = Math.cos(local * Math.PI * 0.5);
-      const waist = 1 - taper * Math.pow(Math.sin(yn * Math.PI), 2) * 0.45;
-
-      const columnShift = Math.sin((column - pieces * 0.5) * 0.18) * cell * strength * 0.65;
-      const cylindrical = Math.sin(local * Math.PI) * cell * strength * 1.85 * modeBoost;
-      const magnifiedLocal = local * cell * compression * waist;
-      const sx = center + magnifiedLocal + cylindrical + columnShift;
-      const sy = fy + Math.sin(local * Math.PI) * cell * strength * 0.18 + Math.sin(phase + yn * Math.PI * 5) * blurAmount * 2.2;
-      const i = (y * outW + x) * 4;
-
-      sample(src, w, h, sx, sy, dst, i);
-
-      if (blurAmount > 0) {
-        const blurY = blurAmount * cell * 1.8;
-        const tmp = [0, 0, 0, 0];
-        sample(src, w, h, sx + cell * 0.12, sy - blurY, tmp, 0);
-        dst[i] = dst[i] * (1 - blurAmount * 0.22) + tmp[0] * blurAmount * 0.22;
-        dst[i + 1] = dst[i + 1] * (1 - blurAmount * 0.22) + tmp[1] * blurAmount * 0.22;
-        dst[i + 2] = dst[i + 2] * (1 - blurAmount * 0.22) + tmp[2] * blurAmount * 0.22;
+      if (maskEnabled) {
+        alphaScale = clamp((radius - d) / edgeFeather, 0, 1);
+        if (alphaScale <= 0) {
+          dst[i] = 0;
+          dst[i + 1] = 0;
+          dst[i + 2] = 0;
+          dst[i + 3] = 0;
+          continue;
+        }
       }
 
-      const leftHighlight = Math.pow(clamp(1 - Math.abs(local + 0.58) * 6.2, 0, 1), 1.35) * glass;
-      const centerGlow = Math.pow(clamp(1 - edge * 2.9, 0, 1), 1.8) * glass * 0.18;
-      const rightShadow = Math.pow(clamp(1 - Math.abs(local - 0.72) * 4.8, 0, 1), 1.15) * glass;
-      const seamShadow = Math.pow(edge, 6) * glass * ridgeContrast;
-      const seamLight = Math.pow(clamp(1 - Math.abs(edge - 0.88) * 12, 0, 1), 1.2) * glass;
+      if (mode === 'full' || normalized <= 1) {
+        const lensT = mode === 'full' ? Math.min(1.35, normalized) : normalized;
+        const curve = 1 + strength * (1 - lensT * lensT);
+        const mapped = 1 / Math.max(0.08, curve * lensZoom);
+        sx = cx + dx * mapped;
+        sy = cy + dy * mapped;
+        darken = vignette * Math.pow(clamp(lensT, 0, 1), 2);
+      }
 
-      const brighten = leftHighlight * 0.34 + centerGlow + seamLight * 0.16;
-      const darken = rightShadow * 0.34 + seamShadow * 0.44;
-      dst[i] = clamp(dst[i] * (1 - darken) + 255 * brighten, 0, 255);
-      dst[i + 1] = clamp(dst[i + 1] * (1 - darken) + 255 * brighten, 0, 255);
-      dst[i + 2] = clamp(dst[i + 2] * (1 - darken) + 255 * brighten, 0, 255);
-      dst[i + 3] = 255;
+      sampleBilinear(src, w, h, sx, sy, dst, i);
+      if (darken > 0) {
+        dst[i] *= 1 - darken;
+        dst[i + 1] *= 1 - darken;
+        dst[i + 2] *= 1 - darken;
+      }
+      dst[i + 3] *= alphaScale;
     }
   }
 
-  if (scale === 1) {
-    resultCtx.putImageData(output, 0, 0);
-  } else {
-    workCtx.putImageData(output, 0, 0);
-    resultCtx.imageSmoothingEnabled = true;
-    resultCtx.imageSmoothingQuality = 'high';
-    resultCtx.clearRect(0, 0, w, h);
-    resultCtx.drawImage(workCanvas, 0, 0, outW, outH, 0, 0, w, h);
-  }
+  resultCtx.putImageData(output, 0, 0);
 }
 
 function loadDefaultImage() {
@@ -442,19 +486,29 @@ function stopPan(e) {
 stageEl.addEventListener('pointerup', stopPan);
 stageEl.addEventListener('pointercancel', stopPan);
 
-$('imageFile').addEventListener('change', e => {
+document.getElementById('imageFile').addEventListener('change', e => {
   if (e.target.files[0]) loadFile(e.target.files[0]);
 });
 
 document.querySelectorAll('input[type="range"]').forEach(input => {
   const valueEl = $(`${input.id}Val`);
   input.addEventListener('input', () => {
-    if (valueEl) {
-      valueEl.textContent = input.step === '1' ? `${parseInt(input.value, 10)}` : parseFloat(input.value).toFixed(2);
-    }
-    scheduleRender(true);
+    if (valueEl) valueEl.textContent = parseFloat(input.value).toFixed(2);
+    scheduleRender();
   });
-  input.addEventListener('change', () => scheduleRender(false));
+});
+
+$('maskEnabled').addEventListener('change', () => {
+  $('maskVal').textContent = $('maskEnabled').checked ? 'On' : 'Off';
+  scheduleRender();
+});
+
+$('resetCenterBtn').addEventListener('click', () => {
+  $('centerX').value = 0.5;
+  $('centerY').value = 0.5;
+  $('centerXVal').textContent = '0.50';
+  $('centerYVal').textContent = '0.50';
+  scheduleRender();
 });
 
 document.querySelectorAll('.preset-btn').forEach(btn => {
@@ -465,13 +519,13 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
     Object.entries(preset).forEach(([id, val]) => {
       $(id).value = val;
       const valueEl = $(`${id}Val`);
-      if (valueEl) valueEl.textContent = id === 'pieces' ? `${val}` : val.toFixed(2);
+      if (valueEl) valueEl.textContent = val.toFixed(2);
     });
-    scheduleRender(false);
+    scheduleRender();
   });
 });
 
-$('modeSelector').addEventListener('click', e => {
+document.getElementById('modeSelector').addEventListener('click', e => {
   e.stopPropagation();
   modeMenu.classList.toggle('open');
 });
@@ -484,16 +538,27 @@ document.querySelectorAll('.font-opt').forEach(opt => {
     opt.classList.add('active');
     modeCurrent.textContent = opt.textContent;
     modeMenu.classList.remove('open');
-    scheduleRender(false);
+    scheduleRender();
   });
 });
 
-$('exportBtn').addEventListener('click', () => {
-  clearTimeout(settleTimer);
-  render(1);
+const exportMenu = document.getElementById('exportMenu');
+document.getElementById('exportBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  exportMenu.classList.toggle('open');
+});
+document.addEventListener('click', () => exportMenu.classList.remove('open'));
+exportMenu.addEventListener('click', e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  exportMenu.classList.remove('open');
+  if (btn.dataset.action === 'reset') {
+    resetView();
+    return;
+  }
   const a = document.createElement('a');
   a.href = resultCanvas.toDataURL('image/png');
-  a.download = 'ribbon-glass.png';
+  a.download = 'fisheye-effect.png';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
