@@ -120,29 +120,6 @@
     .btn-o.on { background: var(--bg3); border-color: #52525B; }
     .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-    /* ── PRESETS ── */
-    .preset {
-      width: 100%;
-      text-align: left;
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 2px;
-      padding: 8px 10px;
-      cursor: pointer;
-      transition: all .1s;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: #D4D4D8;
-      font-family: 'IBM Plex Sans', sans-serif;
-    }
-    .preset:hover { background: var(--bg2); }
-    .preset.on { background: var(--bg3); border-color: #52525B; }
-    .preset-name { font-size: 13px; font-weight: 500; display: block; }
-    .preset-desc { font-size: 11px; color: var(--text3); margin-top: 2px; display: block; }
-    .check { color: var(--accent); font-size: 13px; display: none; }
-    .preset.on .check { display: block; }
-
     /* ── CANVAS AREA ── */
     .canvas-area {
       position: fixed;
@@ -157,8 +134,60 @@
       position: relative;
       overflow: hidden;
     }
-    #ascii-canvas { position: absolute; image-rendering: pixelated; display: block; transform-origin: center center; }
-    #orig-preview { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
+    #ascii-canvas { position: absolute; z-index: 2; image-rendering: pixelated; display: block; transform-origin: center center; }
+    .compare-source {
+      position: absolute;
+      z-index: 1;
+      display: none;
+      object-fit: fill;
+      transform-origin: center center;
+      pointer-events: none;
+    }
+    .compare-active .compare-source.active { display: block !important; }
+    .compare-divider {
+      position: absolute;
+      z-index: 4;
+      display: none;
+      width: 2px;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 0 0 1px rgba(0,0,0,.3), 0 0 16px rgba(0,0,0,.45);
+      cursor: ew-resize;
+      touch-action: none;
+    }
+    .compare-active .compare-divider { display: block; }
+    .compare-handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 38px;
+      height: 38px;
+      transform: translate(-50%, -50%);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: rgba(9,9,11,.86);
+      box-shadow: 0 4px 18px rgba(0,0,0,.38);
+      display: grid;
+      place-items: center;
+      color: #fff;
+    }
+    .compare-handle::before { content: '\2039  \203A'; font-size: 20px; line-height: 1; letter-spacing: 2px; transform: translateY(-1px); }
+    .compare-label {
+      position: absolute;
+      z-index: 3;
+      display: none;
+      top: 0;
+      padding: 6px 9px;
+      background: rgba(9,9,11,.72);
+      border: 1px solid rgba(255,255,255,.12);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      pointer-events: none;
+    }
+    .compare-active .compare-label { display: block; }
+    #compare-original-label { left: 0; }
+    #compare-effect-label { right: 0; }
 
     .status-bar {
       position: absolute;
@@ -408,16 +437,9 @@
         </div>
       </div>
       <input type="file" id="file-input" accept="image/*,video/*" class="hidden">
-      <video id="src-video" class="hidden" loop muted playsinline crossorigin="anonymous"></video>
+      <video id="src-video" class="compare-source" loop muted playsinline crossorigin="anonymous"></video>
       <canvas id="tmp-canvas" class="hidden"></canvas>
       <button class="btn btn-y" id="browse-btn">Browse Files</button>
-    </div>
-
-    <div class="section">
-      <div class="section-label">PRESETS</div>
-      <select id="presets-list">
-        <option value="">Select a preset…</option>
-      </select>
     </div>
 
     <div class="section">
@@ -427,7 +449,7 @@
           <circle cx="8.5" cy="8.5" r="1.5"/>
           <polyline points="21 15 16 10 5 21"/>
         </svg>
-        Show Original
+        <span id="ba-label">Compare View</span>
       </button>
       <div class="btn-row">
         <button class="btn btn-o" id="reset-btn">Reset</button>
@@ -440,7 +462,12 @@
   <main class="canvas-area">
     <div class="canvas-scroll" id="canvas-scroll">
       <canvas id="ascii-canvas"></canvas>
-      <img id="orig-preview" alt="Original">
+      <img id="orig-preview" class="compare-source" alt="Original">
+      <div class="compare-label" id="compare-original-label">ORIGINAL</div>
+      <div class="compare-label" id="compare-effect-label">ASCII</div>
+      <div class="compare-divider" id="compare-divider" role="slider" tabindex="0" aria-label="Before and after comparison" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+        <span class="compare-handle" aria-hidden="true"></span>
+      </div>
     </div>
     <div class="status-bar" id="status-bar">
       <span id="s-dims">–</span>
@@ -512,6 +539,7 @@
           <option value="flicker">Flicker</option>
           <option value="wave">Wave</option>
           <option value="scanline">Scanline</option>
+          <option value="pulse">Pulse</option>
         </select>
       </div>
       <div class="ctrl">
@@ -605,15 +633,7 @@ const S = {
   animationSpeed:  0,
   effectIntensity: 0,
 };
-
-const PRESETS = [
-  { name:'Terminal',     desc:'Classic green on black',     cfg:{ textColor:'#00FF00', backgroundColor:'#000000', colorMode:'monochrome', currentEffect:'none',     ultraBold:true,  density:80,  contrast:50,  brightness:50, animationSpeed:0,  effectIntensity:0  } },
-  { name:'Matrix',       desc:'Falling green characters',   cfg:{ textColor:'#00FF41', backgroundColor:'#001100', colorMode:'monochrome', currentEffect:'matrix',   ultraBold:true,  density:70,  contrast:70,  brightness:40, animationSpeed:60, effectIntensity:70 } },
-  { name:'Newspaper',    desc:'Black and white, high contrast', cfg:{ textColor:'#111111', backgroundColor:'#F5F0E8', colorMode:'grayscale', currentEffect:'none', ultraBold:false, density:90,  contrast:80,  brightness:55, animationSpeed:0,  effectIntensity:0  } },
-  { name:'Brutalist',    desc:'Stark black and white',      cfg:{ textColor:'#FFFFFF', backgroundColor:'#000000', colorMode:'monochrome', currentEffect:'none',     ultraBold:true,  density:60,  contrast:100, brightness:50, animationSpeed:0,  effectIntensity:0  } },
-  { name:'Cyberpunk',    desc:'Neon colors with glitch',    cfg:{ textColor:'#FF00FF', backgroundColor:'#080010', colorMode:'duotone',    currentEffect:'glitch',   ultraBold:true,  density:75,  contrast:70,  brightness:55, animationSpeed:40, effectIntensity:60 } },
-  { name:'Minimal White',desc:'Light theme, sparse',        cfg:{ textColor:'#27272A', backgroundColor:'#FAFAFA', colorMode:'monochrome', currentEffect:'none',     ultraBold:false, density:40,  contrast:40,  brightness:60, animationSpeed:0,  effectIntensity:0  } },
-];
+const DEFAULTS = { ...S };
 
 // ═══════════════════════════════════════════════════
 // ASCII CONVERSION
@@ -701,6 +721,45 @@ let rafId     = null;
 let t0        = Date.now();
 let lastVidFt = 0;
 let userZoom  = 1;
+let compareOn = false;
+let compareAt = 50;
+
+function activeCompareSource() {
+  return document.getElementById(isVideo ? 'src-video' : 'orig-preview');
+}
+
+function updateCompareLayout(scale, left, top) {
+  const scroll = document.getElementById('canvas-scroll');
+  const source = activeCompareSource();
+  const divider = document.getElementById('compare-divider');
+  const originalLabel = document.getElementById('compare-original-label');
+  const effectLabel = document.getElementById('compare-effect-label');
+  const visibleW = canvas.width * scale;
+  const visibleH = canvas.height * scale;
+  const visibleTop = top - (visibleH - canvas.height) / 2;
+  const visibleLeft = left - (visibleW - canvas.width) / 2;
+
+  document.querySelectorAll('.compare-source').forEach(el => el.classList.remove('active'));
+  source.classList.add('active');
+  source.style.width = `${canvas.width}px`;
+  source.style.height = `${canvas.height}px`;
+  source.style.left = `${left}px`;
+  source.style.top = `${top}px`;
+  source.style.transform = `scale(${scale})`;
+
+  canvas.style.clipPath = compareOn ? `inset(0 0 0 ${compareAt}%)` : 'none';
+  scroll.classList.toggle('compare-active', compareOn);
+  divider.style.left = `${visibleLeft + visibleW * compareAt / 100}px`;
+  divider.style.top = `${visibleTop}px`;
+  divider.style.height = `${visibleH}px`;
+  divider.setAttribute('aria-valuenow', Math.round(compareAt));
+
+  originalLabel.style.left = `${visibleLeft + 10}px`;
+  originalLabel.style.top = `${visibleTop + 10}px`;
+  effectLabel.style.right = 'auto';
+  effectLabel.style.left = `${visibleLeft + visibleW - effectLabel.offsetWidth - 10}px`;
+  effectLabel.style.top = `${visibleTop + 10}px`;
+}
 
 function applyCanvasTransform() {
   const scroll = document.getElementById('canvas-scroll');
@@ -713,6 +772,7 @@ function applyCanvasTransform() {
   canvas.style.left      = `${cx - canvas.width  / 2}px`;
   canvas.style.top       = `${cy - canvas.height / 2}px`;
   canvas.style.transform = `scale(${scale})`;
+  updateCompareLayout(scale, cx - canvas.width / 2, cy - canvas.height / 2);
 }
 
 // Matrix state
@@ -900,9 +960,10 @@ function loadFile(file) {
   if (isVideo) {
     const vid = document.getElementById('src-video');
     vid.src = url;
-    vid.onloadeddata = () => { startLoop(); };
+    vid.onloadeddata = () => { startLoop(); applyCanvasTransform(); };
     vid.play().catch(() => {});
   } else {
+    document.getElementById('src-video').pause();
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -921,6 +982,7 @@ function loadDefault() {
   img.crossOrigin = 'anonymous';
   img.onload = () => {
     srcImg = img;
+    document.getElementById('orig-preview').src = 'default.png';
     asciiData = convertImage(img);
     render();
   };
@@ -942,39 +1004,6 @@ function reprocess() {
     updateStatus(canvas.width, canvas.height, asciiData.cols, asciiData.rows);
     render();
   }
-}
-
-// ═══════════════════════════════════════════════════
-// PRESETS
-// ═══════════════════════════════════════════════════
-function buildPresets() {
-  const sel = document.getElementById('presets-list');
-  PRESETS.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.name;
-    opt.textContent = p.name;
-    sel.appendChild(opt);
-  });
-  sel.addEventListener('change', e => {
-    if (e.target.value) applyPreset(e.target.value);
-  });
-}
-
-function applyPreset(name) {
-  const p = PRESETS.find(x => x.name === name);
-  if (!p) return;
-  Object.assign(S, p.cfg);
-  syncUI();
-  highlightPreset(name);
-  reprocess();
-}
-
-function highlightPreset(name) {
-  document.getElementById('presets-list').value = name;
-}
-
-function clearPreset() {
-  document.getElementById('presets-list').value = '';
 }
 
 // ═══════════════════════════════════════════════════
@@ -1015,7 +1044,6 @@ function initControls() {
     document.getElementById(`r-${k}`).addEventListener('input', e => {
       S[k] = +e.target.value;
       document.getElementById(`v-${k}`).textContent = S[k];
-      clearPreset();
       reprocess();
     });
   });
@@ -1029,7 +1057,6 @@ function initControls() {
     document.getElementById(rid).addEventListener('input', e => {
       S[key] = +e.target.value;
       if (vid) document.getElementById(vid).textContent = S[key];
-      clearPreset();
       if (needsResize && asciiData) {
         const cw = charW(), ch = charH();
         canvas.width  = Math.ceil(asciiData.cols * cw);
@@ -1044,7 +1071,6 @@ function initControls() {
   // Color mode
   document.getElementById('r-colorMode').addEventListener('change', e => {
     S.colorMode = e.target.value;
-    clearPreset();
     reprocess();
   });
 
@@ -1052,7 +1078,6 @@ function initControls() {
   document.getElementById('r-effect').addEventListener('change', e => {
     S.currentEffect = e.target.value;
     matCols = [];
-    clearPreset();
     render();
   });
 
@@ -1061,36 +1086,56 @@ function initControls() {
     document.getElementById(pickId).addEventListener('input', e => {
       S[key] = e.target.value;
       document.getElementById(textId).value = e.target.value;
-      clearPreset();
       needsReprocess ? reprocess() : render();
     });
     document.getElementById(textId).addEventListener('input', e => {
       if (!isValidHex(e.target.value)) return;
       S[key] = e.target.value;
       document.getElementById(pickId).value = e.target.value;
-      clearPreset();
       needsReprocess ? reprocess() : render();
     });
   }
   colorPair('c-text-pick','c-text','textColor',      true);
   colorPair('c-bg-pick',  'c-bg',  'backgroundColor', false);
 
-  // Before / after
+  // Before / after comparison
   const baBtn = document.getElementById('ba-btn');
-  let showOrig = false;
   baBtn.addEventListener('click', () => {
-    showOrig = !showOrig;
-    baBtn.textContent = showOrig ? 'Show ASCII' : 'Show Original';
-    baBtn.classList.toggle('on', showOrig);
-    canvas.style.display = showOrig ? 'none' : 'block';
-    const orig = document.getElementById('orig-preview');
-    orig.style.display = showOrig ? 'block' : 'none';
+    compareOn = !compareOn;
+    baBtn.classList.toggle('on', compareOn);
+    document.getElementById('ba-label').textContent = compareOn ? 'Exit Compare' : 'Compare View';
+    applyCanvasTransform();
   });
 
-  // Reset (back to Terminal defaults)
+  const scroll = document.getElementById('canvas-scroll');
+  const divider = document.getElementById('compare-divider');
+  const setCompareFromPointer = clientX => {
+    const rect = canvas.getBoundingClientRect();
+    compareAt = Math.max(0, Math.min(100, (clientX - rect.left) / rect.width * 100));
+    applyCanvasTransform();
+  };
+  divider.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    divider.setPointerCapture(e.pointerId);
+    setCompareFromPointer(e.clientX);
+  });
+  divider.addEventListener('pointermove', e => {
+    if (divider.hasPointerCapture(e.pointerId)) setCompareFromPointer(e.clientX);
+  });
+  divider.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    compareAt = Math.max(0, Math.min(100, compareAt + (e.key === 'ArrowRight' ? 2 : -2)));
+    applyCanvasTransform();
+  });
+  scroll.addEventListener('pointerdown', e => {
+    if (!compareOn || e.target === divider || divider.contains(e.target)) return;
+    setCompareFromPointer(e.clientX);
+  });
+
+  // Reset to defaults
   document.getElementById('reset-btn').addEventListener('click', () => {
-    Object.assign(S, PRESETS[0].cfg);
-    clearPreset();
+    Object.assign(S, DEFAULTS);
     syncUI();
     reprocess();
   });
@@ -1110,7 +1155,7 @@ function initControls() {
     S.textColor      = rh();
     S.backgroundColor= Math.random() > .4 ? '#000000' : rh();
     S.currentEffect  = ['none','matrix','glitch','flicker','wave','scanline','pulse'][Math.floor(Math.random()*7)];
-    clearPreset(); syncUI(); reprocess();
+    syncUI(); reprocess();
   });
 }
 
@@ -1294,7 +1339,6 @@ async function expWebM() {
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
-buildPresets();
 initControls();
 initUpload();
 initExport();
