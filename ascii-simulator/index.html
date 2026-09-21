@@ -437,7 +437,6 @@
         </div>
       </div>
       <input type="file" id="file-input" accept="image/*,video/*" class="hidden">
-      <video id="src-video" class="compare-source" loop muted playsinline crossorigin="anonymous"></video>
       <canvas id="tmp-canvas" class="hidden"></canvas>
       <button class="btn btn-y" id="browse-btn">Browse Files</button>
     </div>
@@ -461,6 +460,7 @@
   <!-- ══════════════════ CANVAS CENTER ══════════════════ -->
   <main class="canvas-area">
     <div class="canvas-scroll" id="canvas-scroll">
+      <video id="src-video" class="compare-source" loop muted playsinline crossorigin="anonymous"></video>
       <canvas id="ascii-canvas"></canvas>
       <img id="orig-preview" class="compare-source" alt="Original">
       <div class="compare-label" id="compare-original-label">ORIGINAL</div>
