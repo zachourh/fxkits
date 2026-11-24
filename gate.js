@@ -748,6 +748,13 @@
     document.body.appendChild(lander)
     root.classList.add(LOCK_CLASS)
     initDots()
+    // Open connections to the sign-in hosts early, so the Google window has less to wait for.
+    ;['https://' + FIREBASE_CONFIG.authDomain, 'https://apis.google.com', 'https://accounts.google.com', 'https://identitytoolkit.googleapis.com'].forEach(host => {
+      const link = document.createElement('link')
+      link.rel = 'preconnect'
+      link.href = host
+      document.head.appendChild(link)
+    })
 
     if (looksLikeEmailLink()) {
       const pending = read(PENDING_KEY)
@@ -761,6 +768,12 @@
     try {
       const { fb, auth } = await loadSdk()
       fb.onAuthStateChanged(auth, user => { if (user && !looksLikeEmailLink()) finish(user) })
+      // On desktop, Firebase only loads its Google sign-in helper on the first click, and the popup waits for it.
+      // Loading it now means the popup opens straight away. This uses an internal hook, so it is guarded.
+      try {
+        const resolver = auth._popupRedirectResolver
+        if (resolver && typeof resolver._initialize === 'function') resolver._initialize(auth).catch(() => {})
+      } catch (_) {}
     } catch (_) {}
   }
 
