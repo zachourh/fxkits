@@ -406,7 +406,7 @@
     const RAIN_SHARE = 0.62       // falling streaks per column of the grid
     const BURSTS_PER_SECOND = 2.4
     const PATCHES_PER_SECOND = 0.7
-    const ALPHAS = [0.15, 0.3, 0.52, 0.9]
+    const ALPHAS = [0.2, 0.38, 0.6, 0.95]
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
     // share of streaks, square size, speed range (cells per second), length range, brightness range
     const LAYERS = [
@@ -496,7 +496,7 @@
       base.height = canvas.height
       const b = base.getContext('2d')
       b.setTransform(dpr, 0, 0, dpr, 0, 0)
-      b.fillStyle = 'rgba(255,255,255,0.13)'
+      b.fillStyle = 'rgba(0,0,0,0.22)'
       b.beginPath()
       const o = GAP / 2 - 0.7
       for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) b.rect(x * GAP + o, y * GAP + o, 1.4, 1.4)
@@ -554,7 +554,7 @@
       }
 
       for (let i = 0; i < 4; i++) {
-        ctx.fillStyle = 'rgba(255,255,255,' + ALPHAS[i] + ')'
+        ctx.fillStyle = 'rgba(0,0,0,' + ALPHAS[i] + ')'
         ctx.fill(paths[i])
       }
 
@@ -569,8 +569,8 @@
             if (v * 1.12 > threshold) (v > threshold + 0.26 ? bright : mid).rect(x * GAP + 1, y * GAP + 1, GAP - 2, GAP - 2)
           }
         }
-        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fill(mid)
-        ctx.fillStyle = 'rgba(255,255,255,0.86)'; ctx.fill(bright)
+        ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill(mid)
+        ctx.fillStyle = 'rgba(0,0,0,0.86)'; ctx.fill(bright)
       }
     }
 
