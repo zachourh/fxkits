@@ -409,7 +409,7 @@
     const spillCtx = spill.getContext('2d')
 
     const GAP = 7                 // cell size
-    const REACH = 7               // hover radius, in cells
+    const REACH = 4               // hover radius, in cells
     const FADE = 0.945            // how fast the hover trail dies, per 60th of a second
     const RAIN_SHARE = 0          // falling streaks per column of the grid. 0 turns the rain off, 0.62 was the last setting
     const BURSTS_PER_SECOND = 2.4
@@ -621,8 +621,8 @@
             if (v * 1.12 > threshold) (v > threshold + 0.26 ? bright : mid).rect(x * GAP + 1, y * GAP + 1, GAP - 2, GAP - 2)
           }
         }
-        ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill(mid)
-        ctx.fillStyle = 'rgba(0,0,0,0.86)'; ctx.fill(bright)
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill(mid)
+        ctx.fillStyle = 'rgba(255,255,255,0.78)'; ctx.fill(bright)
         ctx.fillStyle = '#000'; ctx.fill(bite)
         spillCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
         spillCtx.fillStyle = '#075d3f'
