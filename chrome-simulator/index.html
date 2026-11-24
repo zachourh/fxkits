@@ -185,6 +185,8 @@
     white-space: pre; overflow: auto;
   }
 </style>
+<script>try{if(!localStorage.getItem('fxkits_user')){document.documentElement.classList.add('fx-locked');setTimeout(function(){if(!document.querySelector('.fxkits-lander'))document.documentElement.classList.remove('fx-locked')},4000)}}catch(e){}</script>
+<style>html.fx-locked body > *:not(.fxkits-lander){visibility:hidden!important}</style>
 </head>
 <body>
 <div id="app">
@@ -1822,7 +1824,7 @@ function showLoading(on) {
   composer.render()
 })()
 </script>
-<script src="/gate.js?v=5" defer></script>
+<script src="/gate.js?v=8" defer></script>
 <script src="/share.js" defer></script>
 </body>
 </html>

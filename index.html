@@ -326,6 +326,8 @@ footer {
   }
 }
 </style>
+<script>try{if(!localStorage.getItem('fxkits_user')){document.documentElement.classList.add('fx-locked');setTimeout(function(){if(!document.querySelector('.fxkits-lander'))document.documentElement.classList.remove('fx-locked')},4000)}}catch(e){}</script>
+<style>html.fx-locked body > *:not(.fxkits-lander){visibility:hidden!important}</style>
 </head>
 <body>
 
@@ -466,6 +468,7 @@ footer {
   <div class="footer-copy">
     <p>© Fxkits.io 2026. All rights reserved</p>
     <p>Built by Zakaria Ourhou</p>
+    <p><a href="terms/" style="color:inherit">Terms</a> &nbsp;·&nbsp; <a href="privacy/" style="color:inherit">Privacy Policy</a> <span data-fxkits-signout hidden>&nbsp;·&nbsp; <a href="#" style="color:inherit">Sign out</a></span></p>
   </div>
   <a class="instagram-link" href="https://www.instagram.com/zachex/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -476,5 +479,6 @@ footer {
   </a>
 </footer>
 
+<script src="/gate.js?v=8" defer></script>
 </body>
 </html>

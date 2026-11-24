@@ -1,5 +1,6 @@
 // Cloudflare Pages Function: POST /api/subscribe
-// Replaces api/subscribe.php. Adds the email to Kit (subscriber, form, tag, optional role tag).
+// Takes a Firebase sign-in token, confirms it with Firebase, and adds that verified email to Kit
+// (subscriber, form, tag, optional role tag).
 //
 // Settings, in the Cloudflare Pages project under Settings > Variables and Secrets:
 //   KIT_API_KEY    (secret)  Kit v4 API key
@@ -8,6 +9,8 @@
 //                  e.g. {"Freelance designer": 123, "Student or learning": 456}
 
 const KIT_FORM_ID = 9881119
+// Public Firebase web key, the same one the site ships to every browser.
+const FIREBASE_API_KEY = 'AIzaSyBrTrB8rsNdUQOwXb-1Iflg9iyoSx29BEg'
 const ALLOWED_ROLES = [
   'Student or learning',
   'Freelance designer',
@@ -46,6 +49,25 @@ function readRoleTags(raw) {
   }
 }
 
+// Asks Firebase who the sign-in token belongs to. Returns null unless the email is verified.
+async function verifiedUser(idToken, env) {
+  const key = String(env.FIREBASE_API_KEY ?? FIREBASE_API_KEY)
+  try {
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+      signal: AbortSignal.timeout(12000),
+    })
+    if (!res.ok) return null
+    const user = ((await res.json()).users ?? [])[0]
+    if (!user || !user.email || user.emailVerified !== true) return null
+    return { email: String(user.email).trim(), name: String(user.displayName ?? '') }
+  } catch (_) {
+    return null
+  }
+}
+
 export async function onRequestPost({ request, env }) {
   let data = null
   try {
@@ -54,9 +76,15 @@ export async function onRequestPost({ request, env }) {
     data = null
   }
   const body = data && typeof data === 'object' ? data : {}
-  const email = String(body.email ?? '').trim()
-  const name = String(body.name ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 80)
+  const idToken = String(body.idToken ?? '')
   const role = String(body.role ?? '').trim()
+  if (!idToken || idToken.length > 4096) return respond(false, 401)
+
+  // The email comes from the verified sign-in, never from what the browser claims.
+  const user = await verifiedUser(idToken, env)
+  if (!user) return respond(false, 401)
+  const email = user.email
+  const name = user.name.replace(/[^\p{L}\p{N} .'-]/gu, '').trim().split(/\s+/)[0].slice(0, 80)
 
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return respond(false, 400)
 
