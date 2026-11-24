@@ -77,11 +77,12 @@
     }
     .fxkits-lander * { box-sizing: border-box; }
     .fxl-inner {
-      width: 100%; max-width: 560px; margin: auto;
+      width: 100%; max-width: 680px; margin: auto;
       display: flex; flex-direction: column; align-items: center; text-align: center;
     }
     .fxl-logo { width: 52px; height: 52px; border-radius: 12px; margin-bottom: 36px; display: block; }
     .fxl-title { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; color: #fff; }
+    .fxl-title-hero { font-size: 40px; letter-spacing: -0.035em; line-height: 1.08; }
     .fxl-sub { margin: 14px 0 0; max-width: 470px; font-size: 16px; line-height: 1.5; color: #8d8d92; }
     .fxl-sub strong { color: #e4e4e7; font-weight: 500; }
     .fxl-actions { margin-top: 34px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
@@ -117,6 +118,7 @@
     .fxl-legal a:hover { color: #fff; }
     @media (max-width: 520px) {
       .fxl-title { font-size: 25px; }
+      .fxl-title-hero { font-size: 31px; }
       .fxl-sub { font-size: 15px; }
       .fxl-actions { flex-direction: column; width: 100%; max-width: 380px; }
     }
@@ -161,7 +163,7 @@
   function viewWelcome() {
     inner.innerHTML = `
       ${LOGO}
-      <h1 class="fxl-title">AI-powered visual effects for designers</h1>
+      <h1 class="fxl-title fxl-title-hero">AI-powered visual tools for creators</h1>
       <p class="fxl-sub">Upload your assets, tune the look, and export polished visuals from focused browser-based simulators.</p>
       <div class="fxl-actions">
         <button class="fxl-btn fxl-btn-primary" type="button" data-go="signin">Sign in</button>
