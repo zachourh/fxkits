@@ -387,9 +387,12 @@
   }
 
 
-  // Dot texture on the green panel, with two layers of motion on the same grid:
-  //  - rain: small squares fall from top to bottom in columns, always running
-  //  - hover: cells near the cursor switch on through an ordered-dither pattern and leave a short trail
+  // Dot texture on the green panel, with four kinds of motion on the same grid:
+  //  - rain: squares fall in columns on three depth layers (far is small, slow and dim; near is large, fast and bright),
+  //          with tails that break into gaps and flicker, and the odd streak that slips sideways
+  //  - bursts: short horizontal runs of bars that flash and thin out, like a scanline of data
+  //  - patches: small blocks of ordered-dither pattern that fade in and dissolve
+  //  - hover: cells near the cursor switch on through the same dither pattern and leave a short trail
   function initDots() {
     const canvas = document.createElement('canvas')
     canvas.className = 'fxl-dots'
@@ -401,15 +404,23 @@
     const GAP = 7                 // cell size
     const REACH = 7               // hover radius, in cells
     const FADE = 0.945            // how fast the hover trail dies, per 60th of a second
-    const RAIN_SHARE = 0.55       // falling streaks per column of the grid
-    const RAIN_SQUARE = 3         // size of a falling square, in px
+    const RAIN_SHARE = 0.62       // falling streaks per column of the grid
+    const BURSTS_PER_SECOND = 2.4
+    const PATCHES_PER_SECOND = 0.7
+    const ALPHAS = [0.15, 0.3, 0.52, 0.9]
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
+    // share of streaks, square size, speed range (cells per second), length range, brightness range
+    const LAYERS = [
+      { share: 0.58, size: 2, speed: [4, 10], length: [4, 11], level: [0.28, 0.5] },
+      { share: 0.31, size: 3, speed: [10, 21], length: [6, 19], level: [0.5, 0.82] },
+      { share: 0.11, size: 5, speed: [23, 40], length: [10, 27], level: [0.9, 1] }
+    ]
     const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     const base = document.createElement('canvas')   // the resting dots, drawn once per resize
     let w = 0, h = 0, dpr = 1, cols = 0, rows = 0
     let heat = new Float32Array(0)
-    let drops = []
+    let drops = [], bursts = [], patches = []
     let mx = 0, my = 0, lx = 0, ly = 0
     let inside = false
     let hot = false
@@ -420,15 +431,45 @@
       const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453
       return n - Math.floor(n)
     }
+    function between(range) { return range[0] + Math.random() * (range[1] - range[0]) }
+    function levelOf(v) { return v > 0.7 ? 3 : v > 0.42 ? 2 : v > 0.2 ? 1 : 0 }
 
     function newDrop(fromTop) {
-      const length = 5 + Math.floor(Math.random() * 14)
+      let pick = Math.random(), layer = LAYERS[0]
+      for (const candidate of LAYERS) { if (pick < candidate.share) { layer = candidate; break } pick -= candidate.share }
+      const length = Math.round(between(layer.length))
       return {
         col: Math.floor(Math.random() * cols),
-        head: fromTop ? -Math.random() * 12 : Math.random() * (rows + length),
-        speed: 7 + Math.random() * 16,      // cells per second
+        head: fromTop ? -Math.random() * 14 : Math.random() * (rows + length),
+        speed: between(layer.speed),
         length,
-        level: 0.35 + Math.random() * 0.65
+        level: between(layer.level),
+        size: layer.size,
+        seed: Math.random() * 1000
+      }
+    }
+
+    function newBurst() {
+      return {
+        col: Math.floor(Math.random() * cols),
+        row: Math.floor(Math.random() * rows),
+        length: 8 + Math.floor(Math.random() * 34),
+        dir: Math.random() < 0.5 ? -1 : 1,
+        thick: Math.random() < 0.25 ? 2 : 1,
+        life: 0,
+        span: 0.22 + Math.random() * 0.4
+      }
+    }
+
+    function newPatch() {
+      return {
+        col: Math.floor(Math.random() * cols),
+        row: Math.floor(Math.random() * rows),
+        wide: 4 + Math.floor(Math.random() * 8),
+        tall: 3 + Math.floor(Math.random() * 5),
+        life: 0,
+        span: 0.8 + Math.random() * 0.9,
+        peak: 0.35 + Math.random() * 0.4
       }
     }
 
@@ -469,22 +510,53 @@
       ctx.drawImage(base, 0, 0)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-      // rain: three brightness steps, brightest at the head of each streak
-      if (drops.length) {
-        const steps = [new Path2D(), new Path2D(), new Path2D()]
-        const o = (GAP - RAIN_SQUARE) / 2
-        for (const drop of drops) {
-          const head = Math.floor(drop.head)
-          for (let k = 0; k < drop.length; k++) {
-            const y = head - k
-            if (y < 0 || y >= rows) continue
-            const v = (1 - k / drop.length) * drop.level
-            steps[v > 0.62 ? 2 : v > 0.3 ? 1 : 0].rect(drop.col * GAP + o, y * GAP + o, RAIN_SQUARE, RAIN_SQUARE)
+      const paths = [new Path2D(), new Path2D(), new Path2D(), new Path2D()]
+      function cell(x, y, size, v) {
+        if (x < 0 || x >= cols || y < 0 || y >= rows) return
+        const o = (GAP - size) / 2
+        paths[levelOf(v)].rect(x * GAP + o, y * GAP + o, size, size)
+      }
+      const flicker = Math.floor(clock / 4)
+
+      // rain
+      for (const drop of drops) {
+        const head = Math.floor(drop.head)
+        for (let k = 0; k < drop.length; k++) {
+          const along = 1 - k / drop.length
+          // the further up the tail, the more cells drop out, and which ones changes over time
+          if (k > 1 && hash(drop.seed + k * 7.3, flicker) > 0.2 + Math.pow(along, 0.7)) continue
+          cell(drop.col, head - k, k === 0 && drop.size > 2 ? drop.size + 1 : drop.size, k === 0 ? Math.min(1, drop.level + 0.35) : along * drop.level)
+        }
+      }
+
+      // bursts: solid at the origin, then bars with widening gaps
+      for (const burst of bursts) {
+        const age = burst.life / burst.span
+        const strength = age < 0.15 ? 1 : 1 - (age - 0.15) / 0.85
+        for (let i = 0; i < burst.length; i++) {
+          const gap = 1 + Math.floor(i / 5)
+          if (i > 2 && i % gap !== 0) continue
+          const v = strength * (1 - i / burst.length * 0.75)
+          if (hash(burst.col + i * 3.1, burst.row + flicker) > v + 0.25) continue
+          for (let t = 0; t < burst.thick; t++) cell(burst.col + burst.dir * i, burst.row + t, GAP - 2, v * 0.85)
+        }
+      }
+
+      // patches: an ordered-dither block whose density rises, then falls
+      for (const patch of patches) {
+        const age = patch.life / patch.span
+        const density = patch.peak * Math.sin(Math.min(1, age) * Math.PI)
+        for (let y = 0; y < patch.tall; y++) {
+          for (let x = 0; x < patch.wide; x++) {
+            const cx = patch.col + x, cy = patch.row + y
+            if (density > (BAYER[(cx & 3) + ((cy & 3) << 2)] + 0.5) / 16) cell(cx, cy, GAP - 2, 0.3 + density * 0.4)
           }
         }
-        ctx.fillStyle = 'rgba(255,255,255,0.17)'; ctx.fill(steps[0])
-        ctx.fillStyle = 'rgba(255,255,255,0.36)'; ctx.fill(steps[1])
-        ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fill(steps[2])
+      }
+
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = 'rgba(255,255,255,' + ALPHAS[i] + ')'
+        ctx.fill(paths[i])
       }
 
       // hover: ordered dither, so it runs from solid at the cursor to scattered squares at the edge
@@ -515,6 +587,8 @@
       canvas.height = Math.max(1, Math.round(h * dpr))
       drawBase()
       drops = []
+      bursts = []
+      patches = []
       if (!still) for (let i = 0; i < Math.round(cols * RAIN_SHARE); i++) drops.push(newDrop(false))
       draw()
     }
@@ -528,8 +602,18 @@
       for (let i = 0; i < drops.length; i++) {
         const drop = drops[i]
         drop.head += drop.speed * dt
+        if (Math.random() < 0.22 * dt) drop.col += Math.random() < 0.5 ? -1 : 1   // a streak slips sideways now and then
         if (drop.head - drop.length > rows) drops[i] = newDrop(true)
       }
+
+      // the wider the panel, the more often bursts and patches appear
+      const scale = cols / 210
+      if (Math.random() < BURSTS_PER_SECOND * scale * dt) bursts.push(newBurst())
+      if (Math.random() < PATCHES_PER_SECOND * scale * dt) patches.push(newPatch())
+      for (const burst of bursts) burst.life += dt
+      for (const patch of patches) patch.life += dt
+      bursts = bursts.filter(burst => burst.life < burst.span)
+      patches = patches.filter(patch => patch.life < patch.span)
 
       if (hot) {
         // Rows fade at slightly different speeds, so the trail tears apart instead of shrinking evenly.
