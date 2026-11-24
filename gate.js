@@ -185,11 +185,16 @@
 
       submitting = true
       try {
-        await fetch('/api/subscribe.php', {
+        // Cloudflare serves /api/subscribe. The .php path is the fallback for the old PHP host.
+        const options = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        })
+        }
+        const response = await fetch('/api/subscribe', options)
+        if (response.status === 404 || response.status === 405) {
+          await fetch('/api/subscribe.php', options)
+        }
       } catch (_) {
         // Export should keep working even when lead capture fails.
       }
