@@ -93,9 +93,8 @@
       position: relative; flex: 1 1 auto; min-height: 520px; display: flex; padding: 48px 24px;
       border-radius: 16px; overflow: hidden; background-color: #075d3f;
       background-image:
-        radial-gradient(ellipse 44% 32% at 50% 106%, #f1ffe2 0%, rgba(196,246,178,0.9) 20%, rgba(70,178,118,0.55) 48%, rgba(7,93,63,0) 80%),
         radial-gradient(ellipse 120% 95% at 50% 38%, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.24) 100%);
-      background-size: 100% 100%, 100% 100%;
+      background-size: 100% 100%;
     }
     .fxl-dots { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .fxl-inner {
