@@ -109,7 +109,7 @@
     .fxl-sub { margin: 16px 0 0; max-width: 480px; font-size: 16px; line-height: 1.5; color: rgba(255,255,255,0.82); }
     .fxl-sub-hero { margin-top: 12px; max-width: 560px; font-size: 19px; line-height: 1.45; color: rgba(255,255,255,0.92); }
     .fxl-sub strong { color: #fff; font-weight: 600; }
-    .fxl-actions { margin-top: 40px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .fxl-actions { margin-top: 40px; display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; }
     .fxl-btn {
       height: 46px; padding: 0 22px; border-radius: 10px; cursor: pointer; white-space: nowrap;
       font: inherit; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
@@ -139,6 +139,7 @@
     .fxl-switch { margin-top: 18px; font-size: 14px; color: rgba(255,255,255,0.8); }
     .fxl-link { background: none; border: 0; padding: 0; font: inherit; color: #fff; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
     .fxl-link:hover { opacity: 0.75; }
+    .fxl-hero-link { font-size: 17px; font-weight: 500; padding: 0 12px; }
     .fxl-legal { margin: 26px 0 0; max-width: 400px; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,0.66); }
     .fxl-legal a { color: rgba(255,255,255,0.9); text-underline-offset: 2px; }
     .fxl-legal a:hover { color: #fff; }
@@ -231,8 +232,8 @@
       <h1 class="fxl-title fxl-title-hero">AI-powered visual tools for creators</h1>
       <p class="fxl-sub fxl-sub-hero">Upload your assets, tune the look, and export polished visuals from focused browser-based simulators.</p>
       <div class="fxl-actions">
+        <button class="fxl-link fxl-hero-link" type="button" data-go="signin">Login</button>
         <button class="fxl-btn fxl-btn-primary fxl-btn-hero" type="button" data-go="signup">Create account</button>
-        <button class="fxl-btn fxl-btn-ghost fxl-btn-hero" type="button" data-go="signin">Login</button>
       </div>
       <p class="fxl-legal">${LEGAL_LINKS.replace(' and ', ' &nbsp;·&nbsp; ')}</p>
     `
