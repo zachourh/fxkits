@@ -401,7 +401,7 @@
     const GAP = 7                 // cell size
     const REACH = 7               // hover radius, in cells
     const FADE = 0.945            // how fast the hover trail dies, per 60th of a second
-    const RAIN_SHARE = 0.17       // falling streaks per column of the grid
+    const RAIN_SHARE = 0.55       // falling streaks per column of the grid
     const RAIN_SQUARE = 3         // size of a falling square, in px
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
     const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -482,9 +482,9 @@
             steps[v > 0.62 ? 2 : v > 0.3 ? 1 : 0].rect(drop.col * GAP + o, y * GAP + o, RAIN_SQUARE, RAIN_SQUARE)
           }
         }
-        ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fill(steps[0])
-        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill(steps[1])
-        ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill(steps[2])
+        ctx.fillStyle = 'rgba(255,255,255,0.17)'; ctx.fill(steps[0])
+        ctx.fillStyle = 'rgba(255,255,255,0.36)'; ctx.fill(steps[1])
+        ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fill(steps[2])
       }
 
       // hover: ordered dither, so it runs from solid at the cursor to scattered squares at the edge
