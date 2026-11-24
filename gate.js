@@ -520,7 +520,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
       const paths = [new Path2D(), new Path2D(), new Path2D(), new Path2D()]      // black
-      const white = [new Path2D(), new Path2D(), new Path2D(), new Path2D()]      // the bursts
+      const white = [new Path2D(), new Path2D(), new Path2D(), new Path2D()]      // the bursts and patches
       function cell(x, y, size, v, set) {
         if (x < 0 || x >= cols || y < 0 || y >= rows) return
         const o = (GAP - size) / 2
@@ -559,7 +559,7 @@
         for (let y = 0; y < patch.tall; y++) {
           for (let x = 0; x < patch.wide; x++) {
             const cx = patch.col + x, cy = patch.row + y
-            if (density > (BAYER[(cx & 3) + ((cy & 3) << 2)] + 0.5) / 16) cell(cx, cy, GAP - 2, 0.3 + density * 0.4)
+            if (density > (BAYER[(cx & 3) + ((cy & 3) << 2)] + 0.5) / 16) cell(cx, cy, GAP - 2, 0.3 + density * 0.4, white)
           }
         }
       }
