@@ -72,7 +72,9 @@
     .fxkits-lander {
       position: fixed; inset: 0; z-index: 2147483000;
       display: flex; color: #fff; padding: 24px; overflow-y: auto;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.35) 100%),
+      background:
+        linear-gradient(90deg, #000 0%, rgba(0,0,0,0.85) 14%, rgba(0,0,0,0) 34%, rgba(0,0,0,0) 66%, rgba(0,0,0,0.85) 86%, #000 100%),
+        radial-gradient(ellipse 42% 58% at center, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.86) 55%, rgba(0,0,0,0.66) 100%),
         url('/lander-bg.webp') center / cover no-repeat #000;
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       visibility: visible; -webkit-font-smoothing: antialiased;
