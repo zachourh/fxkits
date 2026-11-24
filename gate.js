@@ -397,9 +397,9 @@
     if (!ctx) return
 
     const GAP = 7          // distance between dots
-    const RADIUS = 130     // how far the cursor reaches
-    const PUSH = 8         // how far a dot moves at the centre
-    const SCATTER = 7      // random spread, so it breaks up instead of bulging
+    const RADIUS = 190     // how far the cursor reaches
+    const PUSH = 18         // how far a dot moves at the centre
+    const SCATTER = 15      // random spread, so it breaks up instead of bulging
     const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     let w = 0, h = 0, dpr = 1
@@ -441,8 +441,8 @@
         const a = noise(x, y, 1), b = noise(x, y, 2), c = noise(x, y, 3)
         const px = x + (dx / d) * PUSH * f + (a - 0.5) * 2 * SCATTER * f
         const py = y + (dy / d) * PUSH * f + (b - 0.5) * 2 * SCATTER * f
-        const size = 1.4 + c * 1.3 * f
-        ctx.fillStyle = 'rgba(255,255,255,' + (0.13 + (0.1 + c * 0.3) * f).toFixed(3) + ')'
+        const size = 1.4 + c * 2.4 * f
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.13 + (0.2 + c * 0.55) * f).toFixed(3) + ')'
         ctx.fillRect(px - size / 2, py - size / 2, size, size)
       }
     }
