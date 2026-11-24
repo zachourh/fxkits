@@ -571,24 +571,59 @@
       spillCtx.setTransform(1, 0, 0, 1, 0, 0)
       spillCtx.clearRect(0, 0, spill.width, spill.height)
       if (hot) {
-        const mid = new Path2D(), bright = new Path2D(), outMid = new Path2D(), outBright = new Path2D()
+        // Inside the panel the cursor leaves the dithered black patch. At an edge the panel itself crumbles:
+        // green fragments break off and drift outward, thinning with distance, and bites open in the green
+        // just inside the edge. The fragment pattern slides outward over time, which is what makes it drift.
+        const mid = new Path2D(), bright = new Path2D(), bite = new Path2D()
+        const debrisNear = new Path2D(), debrisFar = new Path2D()
+        const step = Math.floor(clock / 5)
+        const THROW = 9     // how far fragments travel past the edge, in cells
+        const BITE = 4      // how deep the bites go inside the edge, in cells
         for (let gy = 0; gy < gridH; gy++) {
           for (let gx = 0; gx < gridW; gx++) {
             const v = heat[gy * gridW + gx]
             if (v <= 0.03) continue
-            const threshold = (BAYER[(gx & 3) + ((gy & 3) << 2)] + 0.5) / 16
-            if (v * 1.12 <= threshold) continue
-            const strong = v > threshold + 0.26
             const x = gx - padL, y = gy - padT
-            if (x >= 0 && x < cols && y >= 0 && y < rows) (strong ? bright : mid).rect(x * GAP + 1, y * GAP + 1, GAP - 2, GAP - 2)
-            else (strong ? outBright : outMid).rect(gx * GAP + 1, gy * GAP + 1, GAP - 2, GAP - 2)
+            const overX = x < 0 ? -x : x >= cols ? x - cols + 1 : 0
+            const overY = y < 0 ? -y : y >= rows ? y - rows + 1 : 0
+
+            if (overX || overY) {
+              // outside the panel: a green fragment, or nothing
+              const out = Math.max(overX, overY)
+              if (out > THROW) continue
+              const sx = overX > overY ? (x < 0 ? -1 : 1) : 0
+              const sy = overX > overY ? 0 : (y < 0 ? -1 : 1)
+              const chance = v * 1.15 * Math.pow(1 - (out - 1) / THROW, 1.5)
+              const n = hash(gx - sx * step, gy - sy * step)
+              if (n >= chance) continue
+              if (n < chance * 0.4) debrisNear.rect(gx * GAP + 1, gy * GAP + 1, GAP - 2, GAP - 2)
+              else debrisFar.rect(gx * GAP + 2, gy * GAP + 2, GAP - 4, GAP - 4)
+              continue
+            }
+
+            // inside the panel, close to an edge: a bite out of the green
+            const left = x, right = cols - 1 - x, top = y, bottom = rows - 1 - y
+            const depth = Math.min(left, right, top, bottom)
+            if (depth < BITE) {
+              const sx = depth === left ? -1 : depth === right ? 1 : 0
+              const sy = sx ? 0 : (depth === top ? -1 : 1)
+              if (hash(gx - sx * step + 31.7, gy - sy * step + 17.3) < v * 0.95 * (1 - depth / BITE)) {
+                bite.rect(x * GAP, y * GAP, GAP, GAP)
+                continue
+              }
+            }
+
+            const threshold = (BAYER[(gx & 3) + ((gy & 3) << 2)] + 0.5) / 16
+            if (v * 1.12 > threshold) (v > threshold + 0.26 ? bright : mid).rect(x * GAP + 1, y * GAP + 1, GAP - 2, GAP - 2)
           }
         }
         ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill(mid)
         ctx.fillStyle = 'rgba(0,0,0,0.86)'; ctx.fill(bright)
+        ctx.fillStyle = '#000'; ctx.fill(bite)
         spillCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
-        spillCtx.fillStyle = 'rgba(7,93,63,0.5)'; spillCtx.fill(outMid)
-        spillCtx.fillStyle = 'rgba(7,93,63,1)'; spillCtx.fill(outBright)
+        spillCtx.fillStyle = '#075d3f'
+        spillCtx.fill(debrisNear)
+        spillCtx.fill(debrisFar)
       }
     }
 
