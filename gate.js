@@ -107,7 +107,7 @@
     .fxl-title { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; color: #fff; }
     .fxl-title-hero { font-size: 46px; letter-spacing: -0.035em; line-height: 1.08; }
     .fxl-sub { margin: 16px 0 0; max-width: 480px; font-size: 16px; line-height: 1.5; color: rgba(255,255,255,0.82); }
-    .fxl-sub-hero { margin-top: 26px; max-width: 560px; font-size: 19px; line-height: 1.45; color: rgba(255,255,255,0.92); }
+    .fxl-sub-hero { margin-top: 12px; max-width: 560px; font-size: 19px; line-height: 1.45; color: rgba(255,255,255,0.92); }
     .fxl-sub strong { color: #fff; font-weight: 600; }
     .fxl-actions { margin-top: 40px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
     .fxl-btn {
@@ -157,7 +157,7 @@
       .fxl-title { font-size: 26px; }
       .fxl-title-hero { font-size: 30px; }
       .fxl-sub { font-size: 15px; }
-      .fxl-sub-hero { font-size: 16px; margin-top: 18px; }
+      .fxl-sub-hero { font-size: 16px; margin-top: 10px; }
       .fxl-actions { margin-top: 30px; }
     }
   `
