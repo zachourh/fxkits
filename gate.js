@@ -84,7 +84,7 @@
     .fxl-nav-link { background: none; border: 0; padding: 6px 2px; color: #fff; font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; }
     .fxl-nav-link:hover { opacity: 0.7; }
     .fxl-nav-pill {
-      height: 40px; padding: 0 20px; border: 0; border-radius: 12px; background: #fff; color: #000;
+      height: 40px; padding: 0 20px; border: 0; border-radius: 6px; background: #fff; color: #000;
       font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.15s;
     }
     .fxl-nav-pill:hover { background: #e4e4e4; }
