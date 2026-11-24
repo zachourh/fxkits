@@ -387,9 +387,9 @@
   }
 
 
-  // Dot texture on the green panel. The cursor leaves a dithered data trail: cells near it switch on
-  // as pixel squares through an ordered-dither pattern, stretched into ragged horizontal rows, and the
-  // trail breaks down from solid blocks to checkerboards to sparse dots as it fades.
+  // Dot texture on the green panel, with two layers of motion on the same grid:
+  //  - rain: small squares fall from top to bottom in columns, always running
+  //  - hover: cells near the cursor switch on through an ordered-dither pattern and leave a short trail
   function initDots() {
     const canvas = document.createElement('canvas')
     canvas.className = 'fxl-dots'
@@ -398,72 +398,109 @@
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const GAP = 7                 // cell size, same grid as the resting dots
-    const REACH_Y = 6             // rows above and below the cursor that light up
-    const REACH_X = 9             // shortest row reach, in cells
-    const REACH_X_EXTRA = 22      // extra reach a row can get, which makes the edge ragged
-    const FADE = 0.945            // how fast the trail dies, per frame
+    const GAP = 7                 // cell size
+    const REACH = 7               // hover radius, in cells
+    const FADE = 0.945            // how fast the hover trail dies, per 60th of a second
+    const RAIN_SHARE = 0.17       // falling streaks per column of the grid
+    const RAIN_SQUARE = 3         // size of a falling square, in px
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
     const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+    const base = document.createElement('canvas')   // the resting dots, drawn once per resize
     let w = 0, h = 0, dpr = 1, cols = 0, rows = 0
     let heat = new Float32Array(0)
+    let drops = []
     let mx = 0, my = 0, lx = 0, ly = 0
     let inside = false
-    let frame = 0
+    let hot = false
     let clock = 0
+    let last = 0
 
     function hash(a, b) {
       const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453
       return n - Math.floor(n)
     }
 
-    // Lights the cells around one point, as horizontal rows of uneven length.
+    function newDrop(fromTop) {
+      const length = 5 + Math.floor(Math.random() * 14)
+      return {
+        col: Math.floor(Math.random() * cols),
+        head: fromTop ? -Math.random() * 12 : Math.random() * (rows + length),
+        speed: 7 + Math.random() * 16,      // cells per second
+        length,
+        level: 0.35 + Math.random() * 0.65
+      }
+    }
+
+    // Lights a roughly round patch of cells. Each row gets a slightly different reach, so the edge is uneven.
     function deposit(cx, cy) {
       const col = Math.round(cx / GAP), row = Math.round(cy / GAP)
       const beat = Math.floor(clock / 5)
-      for (let dy = -REACH_Y; dy <= REACH_Y; dy++) {
+      for (let dy = -REACH; dy <= REACH; dy++) {
         const y = row + dy
         if (y < 0 || y >= rows) continue
-        const fy = 1 - Math.abs(dy) / (REACH_Y + 1)
-        const reach = REACH_X + hash(y, beat) * REACH_X_EXTRA * fy
-        const span = Math.ceil(reach)
-        for (let dx = -span; dx <= span; dx++) {
+        const reach = REACH * (0.72 + hash(y, beat) * 0.5)
+        for (let dx = -REACH - 2; dx <= REACH + 2; dx++) {
           const x = col + dx
           if (x < 0 || x >= cols) continue
-          const fx = 1 - Math.abs(dx) / reach
-          if (fx <= 0) continue
-          const v = fy * (0.35 + 0.65 * fx)
+          const v = 1 - Math.sqrt(dx * dx + dy * dy) / reach
+          if (v <= 0) continue
           const i = y * cols + x
           if (v > heat[i]) heat[i] = v
         }
       }
     }
 
+    function drawBase() {
+      base.width = canvas.width
+      base.height = canvas.height
+      const b = base.getContext('2d')
+      b.setTransform(dpr, 0, 0, dpr, 0, 0)
+      b.fillStyle = 'rgba(255,255,255,0.13)'
+      b.beginPath()
+      const o = GAP / 2 - 0.7
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) b.rect(x * GAP + o, y * GAP + o, 1.4, 1.4)
+      b.fill()
+    }
+
     function draw() {
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(base, 0, 0)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.clearRect(0, 0, w, h)
-      const dots = new Path2D(), mid = new Path2D(), bright = new Path2D()
-      const o = GAP / 2
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          const v = heat[y * cols + x]
-          if (v > 0.03) {
-            const threshold = (BAYER[(x & 3) + ((y & 3) << 2)] + 0.5) / 16
-            if (v * 1.12 > threshold) {
-              (v > threshold + 0.26 ? bright : mid).rect(x * GAP + 1, y * GAP + 1, GAP - 2, GAP - 2)
-              continue
-            }
+
+      // rain: three brightness steps, brightest at the head of each streak
+      if (drops.length) {
+        const steps = [new Path2D(), new Path2D(), new Path2D()]
+        const o = (GAP - RAIN_SQUARE) / 2
+        for (const drop of drops) {
+          const head = Math.floor(drop.head)
+          for (let k = 0; k < drop.length; k++) {
+            const y = head - k
+            if (y < 0 || y >= rows) continue
+            const v = (1 - k / drop.length) * drop.level
+            steps[v > 0.62 ? 2 : v > 0.3 ? 1 : 0].rect(drop.col * GAP + o, y * GAP + o, RAIN_SQUARE, RAIN_SQUARE)
           }
-          dots.rect(x * GAP + o - 0.7, y * GAP + o - 0.7, 1.4, 1.4)
         }
+        ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fill(steps[0])
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill(steps[1])
+        ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill(steps[2])
       }
-      ctx.fillStyle = 'rgba(255,255,255,0.13)'
-      ctx.fill(dots)
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'
-      ctx.fill(mid)
-      ctx.fillStyle = 'rgba(255,255,255,0.86)'
-      ctx.fill(bright)
+
+      // hover: ordered dither, so it runs from solid at the cursor to scattered squares at the edge
+      if (hot) {
+        const mid = new Path2D(), bright = new Path2D()
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const v = heat[y * cols + x]
+            if (v <= 0.03) continue
+            const threshold = (BAYER[(x & 3) + ((y & 3) << 2)] + 0.5) / 16
+            if (v * 1.12 > threshold) (v > threshold + 0.26 ? bright : mid).rect(x * GAP + 1, y * GAP + 1, GAP - 2, GAP - 2)
+          }
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fill(mid)
+        ctx.fillStyle = 'rgba(255,255,255,0.86)'; ctx.fill(bright)
+      }
     }
 
     function resize() {
@@ -476,24 +513,37 @@
       heat = new Float32Array(cols * rows)
       canvas.width = Math.max(1, Math.round(w * dpr))
       canvas.height = Math.max(1, Math.round(h * dpr))
+      drawBase()
+      drops = []
+      if (!still) for (let i = 0; i < Math.round(cols * RAIN_SHARE); i++) drops.push(newDrop(false))
       draw()
     }
 
-    function tick() {
-      frame = 0
+    function tick(now) {
       if (!canvas.isConnected) return
-      clock++
+      const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016)
+      last = now
+      clock += dt * 60
 
-      // Rows fade at slightly different speeds, so the trail tears apart instead of shrinking evenly.
-      let peak = 0
-      for (let y = 0; y < rows; y++) {
-        const fade = FADE - 0.05 * hash(y, 7)
-        const start = y * cols
-        for (let x = 0; x < cols; x++) {
-          const v = heat[start + x] * fade
-          heat[start + x] = v
-          if (v > peak) peak = v
+      for (let i = 0; i < drops.length; i++) {
+        const drop = drops[i]
+        drop.head += drop.speed * dt
+        if (drop.head - drop.length > rows) drops[i] = newDrop(true)
+      }
+
+      if (hot) {
+        // Rows fade at slightly different speeds, so the trail tears apart instead of shrinking evenly.
+        let peak = 0
+        for (let y = 0; y < rows; y++) {
+          const fade = Math.pow(FADE - 0.05 * hash(y, 7), dt * 60)
+          const start = y * cols
+          for (let x = 0; x < cols; x++) {
+            const v = heat[start + x] * fade
+            heat[start + x] = v
+            if (v > peak) peak = v
+          }
         }
+        if (!inside && peak < 0.03) { heat.fill(0); hot = false }
       }
 
       if (inside) {
@@ -503,14 +553,12 @@
         for (let i = 1; i <= steps; i++) deposit(lx + dx * i / steps, ly + dy * i / steps)
         lx = mx
         ly = my
-        peak = 1
+        hot = true
       }
 
       draw()
-      if (inside || peak > 0.03) frame = requestAnimationFrame(tick)
-      else { heat.fill(0); draw() }
+      requestAnimationFrame(tick)
     }
-    function wake() { if (!frame) frame = requestAnimationFrame(tick) }
 
     if (!still) {
       panel.addEventListener('pointermove', event => {
@@ -519,14 +567,14 @@
         mx = event.clientX - rect.left
         my = event.clientY - rect.top
         if (!inside) { lx = mx; ly = my; inside = true }
-        wake()
       })
-      panel.addEventListener('pointerleave', () => { inside = false; wake() })
+      panel.addEventListener('pointerleave', () => { inside = false })
     }
 
     if (window.ResizeObserver) new ResizeObserver(resize).observe(panel)
     else window.addEventListener('resize', resize)
     resize()
+    if (!still) requestAnimationFrame(tick)
   }
 
   function looksLikeEmailLink() {
