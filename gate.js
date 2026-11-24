@@ -71,62 +71,101 @@
     html.fx-locked { overflow: hidden !important; }
     .fxkits-lander {
       position: fixed; inset: 0; z-index: 2147483000;
-      display: flex; background: #000; color: #fff; padding: 24px; overflow-y: auto;
+      display: flex; flex-direction: column; background: #000; color: #fff; padding: 0 20px 20px; overflow-y: auto;
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       visibility: visible; -webkit-font-smoothing: antialiased;
     }
     .fxkits-lander * { box-sizing: border-box; }
+
+    .fxl-nav { flex: 0 0 auto; height: 76px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .fxl-wordmark { background: none; border: 0; padding: 0; cursor: pointer; display: block; }
+    .fxl-wordmark img { height: 18px; width: auto; filter: invert(1); display: block; }
+    .fxl-nav-actions { display: flex; align-items: center; gap: 22px; }
+    .fxl-nav-link { background: none; border: 0; padding: 6px 2px; color: #fff; font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; }
+    .fxl-nav-link:hover { opacity: 0.7; }
+    .fxl-nav-pill {
+      height: 40px; padding: 0 20px; border: 0; border-radius: 12px; background: #3e3e3e; color: #fff;
+      font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.15s;
+    }
+    .fxl-nav-pill:hover { background: #4d4d4d; }
+
+    .fxl-panel {
+      position: relative; flex: 1 1 auto; min-height: 520px; display: flex; padding: 48px 24px;
+      border-radius: 30px; overflow: hidden; background-color: #075d3f;
+      background-image:
+        radial-gradient(rgba(255,255,255,0.11) 1px, transparent 1.5px),
+        radial-gradient(ellipse 44% 32% at 50% 106%, #f1ffe2 0%, rgba(196,246,178,0.9) 20%, rgba(70,178,118,0.55) 48%, rgba(7,93,63,0) 80%),
+        radial-gradient(ellipse 120% 95% at 50% 38%, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.24) 100%);
+      background-size: 7px 7px, 100% 100%, 100% 100%;
+    }
     .fxl-inner {
-      width: 100%; max-width: 680px; margin: auto;
+      position: relative; width: 100%; max-width: 680px; margin: auto;
       display: flex; flex-direction: column; align-items: center; text-align: center;
     }
-    .fxl-logo { width: 52px; height: 52px; border-radius: 12px; margin-bottom: 36px; display: block; }
-    .fxl-title { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; color: #fff; }
-    .fxl-title-hero { font-size: 40px; letter-spacing: -0.035em; line-height: 1.08; }
-    .fxl-sub { margin: 14px 0 0; max-width: 470px; font-size: 16px; line-height: 1.5; color: #8d8d92; }
-    .fxl-sub strong { color: #e4e4e7; font-weight: 500; }
-    .fxl-actions { margin-top: 34px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .fxl-inner.fxl-wide { max-width: 1040px; }
+
+    .fxl-title { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; color: #fff; }
+    .fxl-title-hero { font-size: 60px; letter-spacing: -0.04em; line-height: 1.04; }
+    .fxl-sub { margin: 16px 0 0; max-width: 480px; font-size: 16px; line-height: 1.5; color: rgba(255,255,255,0.82); }
+    .fxl-sub-hero { margin-top: 26px; max-width: 560px; font-size: 19px; line-height: 1.45; color: rgba(255,255,255,0.92); }
+    .fxl-sub strong { color: #fff; font-weight: 600; }
+    .fxl-actions { margin-top: 40px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
     .fxl-btn {
       height: 46px; padding: 0 22px; border-radius: 10px; cursor: pointer; white-space: nowrap;
       font: inherit; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-      border: 1px solid transparent; transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+      border: 1px solid transparent; transition: background 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s;
     }
     .fxl-btn:disabled { opacity: 0.55; cursor: default; }
-    .fxl-btn-primary { background: #f4f4f5; color: #000; }
+    .fxl-btn-primary { background: #fbfaf4; color: #0b0b0b; }
     .fxl-btn-primary:hover:not(:disabled) { background: #fff; }
-    .fxl-btn-ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,0.2); }
-    .fxl-btn-ghost:hover:not(:disabled) { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); }
+    .fxl-btn-hero { height: 56px; padding: 0 32px; border-radius: 999px; font-size: 17px; font-weight: 500; }
+    .fxl-btn-hero:hover:not(:disabled) { transform: translateY(-1px); }
+    .fxl-btn-ghost { background: rgba(0,0,0,0.16); color: #fff; border-color: rgba(255,255,255,0.32); }
+    .fxl-btn-ghost:hover:not(:disabled) { border-color: rgba(255,255,255,0.65); background: rgba(0,0,0,0.26); }
     .fxl-form { margin-top: 30px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
     .fxl-form .fxl-btn { width: 100%; }
     .fxl-divider {
       display: flex; align-items: center; gap: 14px; margin: 6px 0;
-      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #5d5d62;
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.66);
     }
-    .fxl-divider::before, .fxl-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.12); }
+    .fxl-divider::before, .fxl-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.26); }
     .fxl-input {
-      width: 100%; height: 46px; padding: 0 15px; border: 1px solid rgba(255,255,255,0.18); border-radius: 10px;
-      background: rgba(255,255,255,0.04); color: #fff; font: inherit; font-size: 15px; outline: none; text-align: left;
+      width: 100%; height: 46px; padding: 0 15px; border: 1px solid rgba(255,255,255,0.32); border-radius: 10px;
+      background: rgba(0,0,0,0.2); color: #fff; font: inherit; font-size: 15px; outline: none; text-align: left;
     }
-    .fxl-input:focus { border-color: rgba(255,255,255,0.5); }
-    .fxl-input::placeholder { color: rgba(255,255,255,0.36); }
-    .fxl-error { min-height: 18px; font-size: 12px; line-height: 1.4; color: #ff9b9b; }
-    .fxl-switch { margin-top: 18px; font-size: 14px; color: #8d8d92; }
+    .fxl-input:focus { border-color: rgba(255,255,255,0.8); }
+    .fxl-input::placeholder { color: rgba(255,255,255,0.5); }
+    .fxl-error { min-height: 18px; font-size: 12px; line-height: 1.4; color: #ffd9d9; }
+    .fxl-switch { margin-top: 18px; font-size: 14px; color: rgba(255,255,255,0.8); }
     .fxl-link { background: none; border: 0; padding: 0; font: inherit; color: #fff; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
     .fxl-link:hover { opacity: 0.75; }
-    .fxl-legal { margin: 26px 0 0; max-width: 400px; font-size: 12px; line-height: 1.5; color: #5d5d62; }
-    .fxl-legal a { color: #8d8d92; text-underline-offset: 2px; }
+    .fxl-legal { margin: 26px 0 0; max-width: 400px; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,0.66); }
+    .fxl-legal a { color: rgba(255,255,255,0.9); text-underline-offset: 2px; }
     .fxl-legal a:hover { color: #fff; }
+    @media (max-width: 900px) {
+      .fxl-title-hero { font-size: 44px; }
+      .fxl-sub-hero { font-size: 17px; }
+    }
     @media (max-width: 520px) {
-      .fxl-title { font-size: 25px; }
-      .fxl-title-hero { font-size: 31px; }
+      .fxkits-lander { padding: 0 12px 12px; }
+      .fxl-nav { height: 62px; padding: 0 6px; }
+      .fxl-wordmark img { height: 15px; }
+      .fxl-nav-actions { gap: 14px; }
+      .fxl-nav-pill { height: 36px; padding: 0 14px; font-size: 14px; }
+      .fxl-nav-link { font-size: 14px; }
+      .fxl-panel { border-radius: 22px; padding: 36px 18px; min-height: 460px; }
+      .fxl-title { font-size: 26px; }
+      .fxl-title-hero { font-size: 33px; }
       .fxl-sub { font-size: 15px; }
-      .fxl-actions { flex-direction: column; width: 100%; max-width: 380px; }
+      .fxl-sub-hero { font-size: 16px; margin-top: 18px; }
+      .fxl-actions { margin-top: 30px; }
     }
   `
   document.head.appendChild(style)
 
   const GOOGLE_ICON = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>'
-  const LOGO = '<img class="fxl-logo" src="/favicon.svg" alt="FXKits">'
+  // The wordmark sits in the nav bar now, so the views carry no logo of their own.
+  const LOGO = ''
   const LEGAL_LINKS = '<a href="/terms/">Terms</a> and <a href="/privacy/">Privacy Policy</a>'
 
   const lander = document.createElement('div')
@@ -134,9 +173,35 @@
   lander.setAttribute('role', 'dialog')
   lander.setAttribute('aria-modal', 'true')
   lander.setAttribute('aria-label', 'Sign in to FXKits')
+  const nav = document.createElement('div')
+  nav.className = 'fxl-nav'
+  nav.innerHTML = `
+    <button class="fxl-wordmark" type="button" data-home aria-label="FXKits"><img src="/logo.svg" alt="FXKits"></button>
+    <div class="fxl-nav-actions">
+      <button class="fxl-nav-link" type="button" data-go="signin">Login</button>
+      <button class="fxl-nav-pill" type="button" data-go="signup">Try Now</button>
+    </div>
+  `
+  const panel = document.createElement('div')
+  panel.className = 'fxl-panel'
   const inner = document.createElement('div')
   inner.className = 'fxl-inner'
-  lander.appendChild(inner)
+  panel.appendChild(inner)
+  lander.append(nav, panel)
+  nav.addEventListener('click', event => {
+    if (busy) return
+    const go = event.target.closest('[data-go]')
+    if (go) { mode = go.dataset.go; viewAuth(); return }
+    if (event.target.closest('[data-home]')) viewWelcome()
+  })
+
+  // Inter is the lander's typeface. Tool pages do not all load it, so the lander brings its own.
+  if (!document.querySelector('link[href*="family=Inter"]')) {
+    const font = document.createElement('link')
+    font.rel = 'stylesheet'
+    font.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
+    document.head.appendChild(font)
+  }
 
   let mode = 'signup'
   let busy = false
@@ -161,13 +226,12 @@
   }
 
   function viewWelcome() {
+    inner.classList.add('fxl-wide')
     inner.innerHTML = `
-      ${LOGO}
       <h1 class="fxl-title fxl-title-hero">AI-powered visual tools for creators</h1>
-      <p class="fxl-sub">Upload your assets, tune the look, and export polished visuals from focused browser-based simulators.</p>
+      <p class="fxl-sub fxl-sub-hero">Upload your assets, tune the look, and export polished visuals from focused browser-based simulators.</p>
       <div class="fxl-actions">
-        <button class="fxl-btn fxl-btn-primary" type="button" data-go="signin">Sign in</button>
-        <button class="fxl-btn fxl-btn-ghost" type="button" data-go="signup">Create account</button>
+        <button class="fxl-btn fxl-btn-primary fxl-btn-hero" type="button" data-go="signup">Create account</button>
       </div>
       <p class="fxl-legal">${LEGAL_LINKS.replace(' and ', ' &nbsp;·&nbsp; ')}</p>
     `
@@ -175,6 +239,7 @@
   }
 
   function viewAuth() {
+    inner.classList.remove('fxl-wide')
     const signup = mode === 'signup'
     inner.innerHTML = `
       ${LOGO}
@@ -198,6 +263,7 @@
   }
 
   function viewSent(email) {
+    inner.classList.remove('fxl-wide')
     inner.innerHTML = `
       ${LOGO}
       <h1 class="fxl-title">Check your inbox</h1>
@@ -208,6 +274,7 @@
   }
 
   function viewConfirm() {
+    inner.classList.remove('fxl-wide')
     inner.innerHTML = `
       ${LOGO}
       <h1 class="fxl-title">Confirm your email</h1>
@@ -222,6 +289,7 @@
   }
 
   function viewWorking(text) {
+    inner.classList.remove('fxl-wide')
     inner.innerHTML = `${LOGO}<h1 class="fxl-title">${esc(text)}</h1>`
   }
 
