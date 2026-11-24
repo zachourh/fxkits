@@ -77,7 +77,7 @@
     }
     .fxkits-lander * { box-sizing: border-box; }
 
-    .fxl-nav { flex: 0 0 auto; height: 76px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .fxl-nav { position: relative; z-index: 2; flex: 0 0 auto; height: 76px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .fxl-wordmark { background: none; border: 0; padding: 0; cursor: pointer; display: block; }
     .fxl-wordmark img { height: 18px; width: auto; filter: invert(1); display: block; }
     .fxl-nav-actions { display: flex; align-items: center; gap: 22px; }
@@ -91,12 +91,13 @@
 
     .fxl-panel {
       position: relative; flex: 1 1 auto; min-height: 520px; display: flex; padding: 48px 24px;
-      border-radius: 16px; overflow: hidden; background-color: #075d3f;
+      border-radius: 16px; background-color: #075d3f;
       background-image:
         radial-gradient(ellipse 120% 95% at 50% 38%, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.24) 100%);
       background-size: 100% 100%;
     }
-    .fxl-dots { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .fxl-dots { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; border-radius: inherit; }
+    .fxl-spill { position: absolute; pointer-events: none; }
     .fxl-inner {
       position: relative; width: 100%; max-width: 680px; margin: auto;
       display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -399,6 +400,13 @@
     panel.prepend(canvas)
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    // The hover grid reaches past the panel on every side. Inside the panel a lit cell is black; outside it is
+    // panel green, drawn on this second canvas, so the edge breaks up in both directions under the cursor.
+    const spill = document.createElement('canvas')
+    spill.className = 'fxl-spill'
+    spill.setAttribute('aria-hidden', 'true')
+    panel.prepend(spill)
+    const spillCtx = spill.getContext('2d')
 
     const GAP = 7                 // cell size
     const REACH = 7               // hover radius, in cells
@@ -418,6 +426,7 @@
 
     const base = document.createElement('canvas')   // the resting dots, drawn once per resize
     let w = 0, h = 0, dpr = 1, cols = 0, rows = 0
+    let padL = 0, padT = 0, gridW = 0, gridH = 0   // extra cells left and above the panel, and the full hover grid size
     let heat = new Float32Array(0)
     let drops = [], bursts = [], patches = []
     let mx = 0, my = 0, lx = 0, ly = 0
@@ -477,15 +486,15 @@
       const col = Math.round(cx / GAP), row = Math.round(cy / GAP)
       const beat = Math.floor(clock / 5)
       for (let dy = -REACH; dy <= REACH; dy++) {
-        const y = row + dy
-        if (y < 0 || y >= rows) continue
+        const y = row + dy + padT
+        if (y < 0 || y >= gridH) continue
         const reach = REACH * (0.72 + hash(y, beat) * 0.5)
         for (let dx = -REACH - 2; dx <= REACH + 2; dx++) {
-          const x = col + dx
-          if (x < 0 || x >= cols) continue
+          const x = col + dx + padL
+          if (x < 0 || x >= gridW) continue
           const v = 1 - Math.sqrt(dx * dx + dy * dy) / reach
           if (v <= 0) continue
-          const i = y * cols + x
+          const i = y * gridW + x
           if (v > heat[i]) heat[i] = v
         }
       }
@@ -559,18 +568,27 @@
       }
 
       // hover: ordered dither, so it runs from solid at the cursor to scattered squares at the edge
+      spillCtx.setTransform(1, 0, 0, 1, 0, 0)
+      spillCtx.clearRect(0, 0, spill.width, spill.height)
       if (hot) {
-        const mid = new Path2D(), bright = new Path2D()
-        for (let y = 0; y < rows; y++) {
-          for (let x = 0; x < cols; x++) {
-            const v = heat[y * cols + x]
+        const mid = new Path2D(), bright = new Path2D(), outMid = new Path2D(), outBright = new Path2D()
+        for (let gy = 0; gy < gridH; gy++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            const v = heat[gy * gridW + gx]
             if (v <= 0.03) continue
-            const threshold = (BAYER[(x & 3) + ((y & 3) << 2)] + 0.5) / 16
-            if (v * 1.12 > threshold) (v > threshold + 0.26 ? bright : mid).rect(x * GAP + 1, y * GAP + 1, GAP - 2, GAP - 2)
+            const threshold = (BAYER[(gx & 3) + ((gy & 3) << 2)] + 0.5) / 16
+            if (v * 1.12 <= threshold) continue
+            const strong = v > threshold + 0.26
+            const x = gx - padL, y = gy - padT
+            if (x >= 0 && x < cols && y >= 0 && y < rows) (strong ? bright : mid).rect(x * GAP + 1, y * GAP + 1, GAP - 2, GAP - 2)
+            else (strong ? outBright : outMid).rect(gx * GAP + 1, gy * GAP + 1, GAP - 2, GAP - 2)
           }
         }
         ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill(mid)
         ctx.fillStyle = 'rgba(0,0,0,0.86)'; ctx.fill(bright)
+        spillCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        spillCtx.fillStyle = 'rgba(7,93,63,0.5)'; spillCtx.fill(outMid)
+        spillCtx.fillStyle = 'rgba(7,93,63,1)'; spillCtx.fill(outBright)
       }
     }
 
@@ -581,9 +599,26 @@
       h = rect.height
       cols = Math.ceil(w / GAP)
       rows = Math.ceil(h / GAP)
-      heat = new Float32Array(cols * rows)
       canvas.width = Math.max(1, Math.round(w * dpr))
       canvas.height = Math.max(1, Math.round(h * dpr))
+
+      // The spill area is whatever room the lander has around the panel, capped at the hover reach.
+      const outer = lander.getBoundingClientRect()
+      const limit = (REACH + 3) * GAP
+      const room = side => Math.max(0, Math.floor(Math.min(limit, side) / GAP))
+      padL = room(rect.left - outer.left)
+      padT = room(rect.top - outer.top)
+      const padR = room(outer.right - rect.right)
+      const padB = room(outer.bottom - rect.bottom)
+      gridW = padL + cols + padR
+      gridH = padT + rows + padB
+      heat = new Float32Array(gridW * gridH)
+      spill.style.left = -padL * GAP + 'px'
+      spill.style.top = -padT * GAP + 'px'
+      spill.style.width = gridW * GAP + 'px'
+      spill.style.height = gridH * GAP + 'px'
+      spill.width = Math.max(1, Math.round(gridW * GAP * dpr))
+      spill.height = Math.max(1, Math.round(gridH * GAP * dpr))
       drawBase()
       drops = []
       bursts = []
@@ -617,10 +652,10 @@
       if (hot) {
         // Rows fade at slightly different speeds, so the trail tears apart instead of shrinking evenly.
         let peak = 0
-        for (let y = 0; y < rows; y++) {
+        for (let y = 0; y < gridH; y++) {
           const fade = Math.pow(FADE - 0.05 * hash(y, 7), dt * 60)
-          const start = y * cols
-          for (let x = 0; x < cols; x++) {
+          const start = y * gridW
+          for (let x = 0; x < gridW; x++) {
             const v = heat[start + x] * fade
             heat[start + x] = v
             if (v > peak) peak = v
@@ -644,14 +679,17 @@
     }
 
     if (!still) {
-      panel.addEventListener('pointermove', event => {
+      lander.addEventListener('pointermove', event => {
         if (event.pointerType && event.pointerType !== 'mouse') return
         const rect = panel.getBoundingClientRect()
-        mx = event.clientX - rect.left
-        my = event.clientY - rect.top
+        const x = event.clientX - rect.left, y = event.clientY - rect.top
+        const near = REACH * GAP
+        if (x < -near || y < -near || x > rect.width + near || y > rect.height + near) { inside = false; return }
+        mx = x
+        my = y
         if (!inside) { lx = mx; ly = my; inside = true }
       })
-      panel.addEventListener('pointerleave', () => { inside = false })
+      lander.addEventListener('pointerleave', () => { inside = false })
     }
 
     if (window.ResizeObserver) new ResizeObserver(resize).observe(panel)
