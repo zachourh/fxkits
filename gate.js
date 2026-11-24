@@ -403,7 +403,7 @@
     const GAP = 7                 // cell size
     const REACH = 7               // hover radius, in cells
     const FADE = 0.945            // how fast the hover trail dies, per 60th of a second
-    const RAIN_SHARE = 0.62       // falling streaks per column of the grid
+    const RAIN_SHARE = 0          // falling streaks per column of the grid. 0 turns the rain off, 0.62 was the last setting
     const BURSTS_PER_SECOND = 2.4
     const PATCHES_PER_SECOND = 0.7
     const ALPHAS = [0.2, 0.38, 0.6, 0.95]
