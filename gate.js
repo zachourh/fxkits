@@ -84,7 +84,7 @@
     .fxl-nav-link { background: none; border: 0; padding: 6px 2px; color: #fff; font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; }
     .fxl-nav-link:hover { opacity: 0.7; }
     .fxl-nav-pill {
-      height: 40px; padding: 0 20px; border: 0; border-radius: 6px; background: #fff; color: #000;
+      height: 40px; padding: 0 20px; border: 0; border-radius: 8px; background: #fff; color: #000;
       font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.15s;
     }
     .fxl-nav-pill:hover { background: #e4e4e4; }
@@ -118,7 +118,7 @@
     .fxl-btn:disabled { opacity: 0.55; cursor: default; }
     .fxl-btn-primary { background: #fbfaf4; color: #0b0b0b; }
     .fxl-btn-primary:hover:not(:disabled) { background: #fff; }
-    .fxl-btn-hero { height: 56px; padding: 0 32px; border-radius: 999px; font-size: 17px; font-weight: 500; }
+    .fxl-btn-hero { height: 52px; padding: 0 28px; border-radius: 8px; font-size: 17px; font-weight: 500; }
     .fxl-btn-hero:hover:not(:disabled) { transform: translateY(-1px); }
     .fxl-btn-ghost { background: rgba(0,0,0,0.16); color: #fff; border-color: rgba(255,255,255,0.32); }
     .fxl-btn-ghost:hover:not(:disabled) { border-color: rgba(255,255,255,0.65); background: rgba(0,0,0,0.26); }
