@@ -415,6 +415,7 @@
     const BURSTS_PER_SECOND = 2.4
     const PATCHES_PER_SECOND = 0.7
     const ALPHAS = [0.2, 0.38, 0.6, 0.95]
+    const WHITE_ALPHAS = [0.15, 0.3, 0.52, 0.9]
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
     // share of streaks, square size, speed range (cells per second), length range, brightness range
     const LAYERS = [
@@ -518,11 +519,12 @@
       ctx.drawImage(base, 0, 0)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-      const paths = [new Path2D(), new Path2D(), new Path2D(), new Path2D()]
-      function cell(x, y, size, v) {
+      const paths = [new Path2D(), new Path2D(), new Path2D(), new Path2D()]      // black
+      const white = [new Path2D(), new Path2D(), new Path2D(), new Path2D()]      // the bursts
+      function cell(x, y, size, v, set) {
         if (x < 0 || x >= cols || y < 0 || y >= rows) return
         const o = (GAP - size) / 2
-        paths[levelOf(v)].rect(x * GAP + o, y * GAP + o, size, size)
+        ;(set || paths)[levelOf(v)].rect(x * GAP + o, y * GAP + o, size, size)
       }
       const flicker = Math.floor(clock / 4)
 
@@ -546,7 +548,7 @@
           if (i > 2 && i % gap !== 0) continue
           const v = strength * (1 - i / burst.length * 0.75)
           if (hash(burst.col + i * 3.1, burst.row + flicker) > v + 0.25) continue
-          for (let t = 0; t < burst.thick; t++) cell(burst.col + burst.dir * i, burst.row + t, GAP - 2, v * 0.85)
+          for (let t = 0; t < burst.thick; t++) cell(burst.col + burst.dir * i, burst.row + t, GAP - 2, v * 0.85, white)
         }
       }
 
@@ -565,6 +567,8 @@
       for (let i = 0; i < 4; i++) {
         ctx.fillStyle = 'rgba(0,0,0,' + ALPHAS[i] + ')'
         ctx.fill(paths[i])
+        ctx.fillStyle = 'rgba(255,255,255,' + WHITE_ALPHAS[i] + ')'
+        ctx.fill(white[i])
       }
 
       // hover: ordered dither, so it runs from solid at the cursor to scattered squares at the edge
