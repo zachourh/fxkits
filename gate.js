@@ -93,11 +93,11 @@
       position: relative; flex: 1 1 auto; min-height: 520px; display: flex; padding: 48px 24px;
       border-radius: 16px; overflow: hidden; background-color: #075d3f;
       background-image:
-        radial-gradient(rgba(255,255,255,0.11) 1px, transparent 1.5px),
         radial-gradient(ellipse 44% 32% at 50% 106%, #f1ffe2 0%, rgba(196,246,178,0.9) 20%, rgba(70,178,118,0.55) 48%, rgba(7,93,63,0) 80%),
         radial-gradient(ellipse 120% 95% at 50% 38%, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.24) 100%);
-      background-size: 7px 7px, 100% 100%, 100% 100%;
+      background-size: 100% 100%, 100% 100%;
     }
+    .fxl-dots { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .fxl-inner {
       position: relative; width: 100%; max-width: 680px; margin: auto;
       display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -386,6 +386,108 @@
     wireSignOut()
   }
 
+
+  // Dot texture on the green panel. Dots near the cursor scatter outward and settle back when it moves on.
+  function initDots() {
+    const canvas = document.createElement('canvas')
+    canvas.className = 'fxl-dots'
+    canvas.setAttribute('aria-hidden', 'true')
+    panel.prepend(canvas)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const GAP = 7          // distance between dots
+    const RADIUS = 130     // how far the cursor reaches
+    const PUSH = 8         // how far a dot moves at the centre
+    const SCATTER = 7      // random spread, so it breaks up instead of bulging
+    const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    let w = 0, h = 0, dpr = 1
+    let mx = 0, my = 0      // cursor
+    let sx = 0, sy = 0      // eased cursor, so the effect trails slightly
+    let power = 0, target = 0
+    let frame = 0
+
+    function noise(x, y, k) {
+      const n = Math.sin(x * 12.9898 + y * 78.233 + k * 37.719) * 43758.5453
+      return n - Math.floor(n)
+    }
+
+    function draw() {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.clearRect(0, 0, w, h)
+      const active = power > 0.01
+      const near = []
+      const r2 = RADIUS * RADIUS
+      ctx.fillStyle = 'rgba(255,255,255,0.13)'
+      ctx.beginPath()
+      for (let y = GAP / 2; y < h; y += GAP) {
+        for (let x = GAP / 2; x < w; x += GAP) {
+          if (active) {
+            const dx = x - sx, dy = y - sy
+            const d2 = dx * dx + dy * dy
+            if (d2 < r2) { near.push(x, y, dx, dy, d2); continue }
+          }
+          ctx.rect(x - 0.7, y - 0.7, 1.4, 1.4)
+        }
+      }
+      ctx.fill()
+
+      for (let i = 0; i < near.length; i += 5) {
+        const x = near[i], y = near[i + 1], dx = near[i + 2], dy = near[i + 3]
+        const d = Math.sqrt(near[i + 4]) || 1
+        let f = 1 - d / RADIUS
+        f = f * f * power
+        const a = noise(x, y, 1), b = noise(x, y, 2), c = noise(x, y, 3)
+        const px = x + (dx / d) * PUSH * f + (a - 0.5) * 2 * SCATTER * f
+        const py = y + (dy / d) * PUSH * f + (b - 0.5) * 2 * SCATTER * f
+        const size = 1.4 + c * 1.3 * f
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.13 + (0.1 + c * 0.3) * f).toFixed(3) + ')'
+        ctx.fillRect(px - size / 2, py - size / 2, size, size)
+      }
+    }
+
+    function resize() {
+      const rect = panel.getBoundingClientRect()
+      dpr = Math.min(2, window.devicePixelRatio || 1)
+      w = rect.width
+      h = rect.height
+      canvas.width = Math.max(1, Math.round(w * dpr))
+      canvas.height = Math.max(1, Math.round(h * dpr))
+      draw()
+    }
+
+    function tick() {
+      frame = 0
+      if (!canvas.isConnected) return
+      sx += (mx - sx) * 0.2
+      sy += (my - sy) * 0.2
+      power += (target - power) * 0.1
+      draw()
+      const settled = Math.abs(target - power) < 0.004 && Math.abs(mx - sx) < 0.2 && Math.abs(my - sy) < 0.2
+      if (!settled) frame = requestAnimationFrame(tick)
+      else if (target === 0) { power = 0; draw() }
+    }
+    function wake() { if (!frame) frame = requestAnimationFrame(tick) }
+
+    if (!still) {
+      panel.addEventListener('pointermove', event => {
+        if (event.pointerType && event.pointerType !== 'mouse') return
+        const rect = panel.getBoundingClientRect()
+        mx = event.clientX - rect.left
+        my = event.clientY - rect.top
+        if (power < 0.01) { sx = mx; sy = my }
+        target = 1
+        wake()
+      })
+      panel.addEventListener('pointerleave', () => { target = 0; wake() })
+    }
+
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(panel)
+    else window.addEventListener('resize', resize)
+    resize()
+  }
+
   function looksLikeEmailLink() {
     const params = new URLSearchParams(window.location.search)
     return params.get('mode') === 'signIn' && params.has('oobCode')
@@ -394,6 +496,7 @@
   async function start() {
     document.body.appendChild(lander)
     root.classList.add(LOCK_CLASS)
+    initDots()
 
     if (looksLikeEmailLink()) {
       const pending = read(PENDING_KEY)
