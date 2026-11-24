@@ -387,7 +387,9 @@
   }
 
 
-  // Dot texture on the green panel. Dots near the cursor scatter outward and settle back when it moves on.
+  // Dot texture on the green panel. The cursor leaves a dithered data trail: cells near it switch on
+  // as pixel squares through an ordered-dither pattern, stretched into ragged horizontal rows, and the
+  // trail breaks down from solid blocks to checkerboards to sparse dots as it fades.
   function initDots() {
     const canvas = document.createElement('canvas')
     canvas.className = 'fxl-dots'
@@ -396,55 +398,72 @@
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const GAP = 7          // distance between dots
-    const RADIUS = 190     // how far the cursor reaches
-    const PUSH = 18         // how far a dot moves at the centre
-    const SCATTER = 15      // random spread, so it breaks up instead of bulging
+    const GAP = 7                 // cell size, same grid as the resting dots
+    const REACH_Y = 6             // rows above and below the cursor that light up
+    const REACH_X = 9             // shortest row reach, in cells
+    const REACH_X_EXTRA = 22      // extra reach a row can get, which makes the edge ragged
+    const FADE = 0.945            // how fast the trail dies, per frame
+    const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
     const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    let w = 0, h = 0, dpr = 1
-    let mx = 0, my = 0      // cursor
-    let sx = 0, sy = 0      // eased cursor, so the effect trails slightly
-    let power = 0, target = 0
+    let w = 0, h = 0, dpr = 1, cols = 0, rows = 0
+    let heat = new Float32Array(0)
+    let mx = 0, my = 0, lx = 0, ly = 0
+    let inside = false
     let frame = 0
+    let clock = 0
 
-    function noise(x, y, k) {
-      const n = Math.sin(x * 12.9898 + y * 78.233 + k * 37.719) * 43758.5453
+    function hash(a, b) {
+      const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453
       return n - Math.floor(n)
+    }
+
+    // Lights the cells around one point, as horizontal rows of uneven length.
+    function deposit(cx, cy) {
+      const col = Math.round(cx / GAP), row = Math.round(cy / GAP)
+      const beat = Math.floor(clock / 5)
+      for (let dy = -REACH_Y; dy <= REACH_Y; dy++) {
+        const y = row + dy
+        if (y < 0 || y >= rows) continue
+        const fy = 1 - Math.abs(dy) / (REACH_Y + 1)
+        const reach = REACH_X + hash(y, beat) * REACH_X_EXTRA * fy
+        const span = Math.ceil(reach)
+        for (let dx = -span; dx <= span; dx++) {
+          const x = col + dx
+          if (x < 0 || x >= cols) continue
+          const fx = 1 - Math.abs(dx) / reach
+          if (fx <= 0) continue
+          const v = fy * (0.35 + 0.65 * fx)
+          const i = y * cols + x
+          if (v > heat[i]) heat[i] = v
+        }
+      }
     }
 
     function draw() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, w, h)
-      const active = power > 0.01
-      const near = []
-      const r2 = RADIUS * RADIUS
-      ctx.fillStyle = 'rgba(255,255,255,0.13)'
-      ctx.beginPath()
-      for (let y = GAP / 2; y < h; y += GAP) {
-        for (let x = GAP / 2; x < w; x += GAP) {
-          if (active) {
-            const dx = x - sx, dy = y - sy
-            const d2 = dx * dx + dy * dy
-            if (d2 < r2) { near.push(x, y, dx, dy, d2); continue }
+      const dots = new Path2D(), mid = new Path2D(), bright = new Path2D()
+      const o = GAP / 2
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const v = heat[y * cols + x]
+          if (v > 0.03) {
+            const threshold = (BAYER[(x & 3) + ((y & 3) << 2)] + 0.5) / 16
+            if (v * 1.12 > threshold) {
+              (v > threshold + 0.26 ? bright : mid).rect(x * GAP + 1, y * GAP + 1, GAP - 2, GAP - 2)
+              continue
+            }
           }
-          ctx.rect(x - 0.7, y - 0.7, 1.4, 1.4)
+          dots.rect(x * GAP + o - 0.7, y * GAP + o - 0.7, 1.4, 1.4)
         }
       }
-      ctx.fill()
-
-      for (let i = 0; i < near.length; i += 5) {
-        const x = near[i], y = near[i + 1], dx = near[i + 2], dy = near[i + 3]
-        const d = Math.sqrt(near[i + 4]) || 1
-        let f = 1 - d / RADIUS
-        f = f * f * power
-        const a = noise(x, y, 1), b = noise(x, y, 2), c = noise(x, y, 3)
-        const px = x + (dx / d) * PUSH * f + (a - 0.5) * 2 * SCATTER * f
-        const py = y + (dy / d) * PUSH * f + (b - 0.5) * 2 * SCATTER * f
-        const size = 1.4 + c * 2.4 * f
-        ctx.fillStyle = 'rgba(255,255,255,' + (0.13 + (0.2 + c * 0.55) * f).toFixed(3) + ')'
-        ctx.fillRect(px - size / 2, py - size / 2, size, size)
-      }
+      ctx.fillStyle = 'rgba(255,255,255,0.13)'
+      ctx.fill(dots)
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'
+      ctx.fill(mid)
+      ctx.fillStyle = 'rgba(255,255,255,0.86)'
+      ctx.fill(bright)
     }
 
     function resize() {
@@ -452,6 +471,9 @@
       dpr = Math.min(2, window.devicePixelRatio || 1)
       w = rect.width
       h = rect.height
+      cols = Math.ceil(w / GAP)
+      rows = Math.ceil(h / GAP)
+      heat = new Float32Array(cols * rows)
       canvas.width = Math.max(1, Math.round(w * dpr))
       canvas.height = Math.max(1, Math.round(h * dpr))
       draw()
@@ -460,13 +482,33 @@
     function tick() {
       frame = 0
       if (!canvas.isConnected) return
-      sx += (mx - sx) * 0.2
-      sy += (my - sy) * 0.2
-      power += (target - power) * 0.1
+      clock++
+
+      // Rows fade at slightly different speeds, so the trail tears apart instead of shrinking evenly.
+      let peak = 0
+      for (let y = 0; y < rows; y++) {
+        const fade = FADE - 0.05 * hash(y, 7)
+        const start = y * cols
+        for (let x = 0; x < cols; x++) {
+          const v = heat[start + x] * fade
+          heat[start + x] = v
+          if (v > peak) peak = v
+        }
+      }
+
+      if (inside) {
+        // Fill the path since the last frame, so a fast sweep leaves one unbroken streak.
+        const dx = mx - lx, dy = my - ly
+        const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / GAP))
+        for (let i = 1; i <= steps; i++) deposit(lx + dx * i / steps, ly + dy * i / steps)
+        lx = mx
+        ly = my
+        peak = 1
+      }
+
       draw()
-      const settled = Math.abs(target - power) < 0.004 && Math.abs(mx - sx) < 0.2 && Math.abs(my - sy) < 0.2
-      if (!settled) frame = requestAnimationFrame(tick)
-      else if (target === 0) { power = 0; draw() }
+      if (inside || peak > 0.03) frame = requestAnimationFrame(tick)
+      else { heat.fill(0); draw() }
     }
     function wake() { if (!frame) frame = requestAnimationFrame(tick) }
 
@@ -476,11 +518,10 @@
         const rect = panel.getBoundingClientRect()
         mx = event.clientX - rect.left
         my = event.clientY - rect.top
-        if (power < 0.01) { sx = mx; sy = my }
-        target = 1
+        if (!inside) { lx = mx; ly = my; inside = true }
         wake()
       })
-      panel.addEventListener('pointerleave', () => { target = 0; wake() })
+      panel.addEventListener('pointerleave', () => { inside = false; wake() })
     }
 
     if (window.ResizeObserver) new ResizeObserver(resize).observe(panel)
