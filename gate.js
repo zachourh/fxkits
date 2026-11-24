@@ -91,7 +91,7 @@
 
     .fxl-panel {
       position: relative; flex: 1 1 auto; min-height: 520px; display: flex; padding: 48px 24px;
-      border-radius: 30px; overflow: hidden; background-color: #075d3f;
+      border-radius: 16px; overflow: hidden; background-color: #075d3f;
       background-image:
         radial-gradient(rgba(255,255,255,0.11) 1px, transparent 1.5px),
         radial-gradient(ellipse 44% 32% at 50% 106%, #f1ffe2 0%, rgba(196,246,178,0.9) 20%, rgba(70,178,118,0.55) 48%, rgba(7,93,63,0) 80%),
@@ -105,7 +105,7 @@
     .fxl-inner.fxl-wide { max-width: 1040px; }
 
     .fxl-title { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; color: #fff; }
-    .fxl-title-hero { font-size: 60px; letter-spacing: -0.04em; line-height: 1.04; }
+    .fxl-title-hero { font-size: 46px; letter-spacing: -0.035em; line-height: 1.08; }
     .fxl-sub { margin: 16px 0 0; max-width: 480px; font-size: 16px; line-height: 1.5; color: rgba(255,255,255,0.82); }
     .fxl-sub-hero { margin-top: 26px; max-width: 560px; font-size: 19px; line-height: 1.45; color: rgba(255,255,255,0.92); }
     .fxl-sub strong { color: #fff; font-weight: 600; }
@@ -143,7 +143,7 @@
     .fxl-legal a { color: rgba(255,255,255,0.9); text-underline-offset: 2px; }
     .fxl-legal a:hover { color: #fff; }
     @media (max-width: 900px) {
-      .fxl-title-hero { font-size: 44px; }
+      .fxl-title-hero { font-size: 38px; }
       .fxl-sub-hero { font-size: 17px; }
     }
     @media (max-width: 520px) {
@@ -153,9 +153,9 @@
       .fxl-nav-actions { gap: 14px; }
       .fxl-nav-pill { height: 36px; padding: 0 14px; font-size: 14px; }
       .fxl-nav-link { font-size: 14px; }
-      .fxl-panel { border-radius: 22px; padding: 36px 18px; min-height: 460px; }
+      .fxl-panel { border-radius: 12px; padding: 36px 18px; min-height: 460px; }
       .fxl-title { font-size: 26px; }
-      .fxl-title-hero { font-size: 33px; }
+      .fxl-title-hero { font-size: 30px; }
       .fxl-sub { font-size: 15px; }
       .fxl-sub-hero { font-size: 16px; margin-top: 18px; }
       .fxl-actions { margin-top: 30px; }
