@@ -73,7 +73,7 @@
       position: fixed; inset: 0; z-index: 2147483000;
       display: flex; color: #fff; padding: 24px; overflow-y: auto;
       background:
-        radial-gradient(ellipse 46% 60% at center, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.84) 60%, rgba(0,0,0,0.72) 100%),
+        radial-gradient(ellipse 46% 60% at center, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.91) 60%, rgba(0,0,0,0.85) 100%),
         url('/lander-bg.webp') center / cover no-repeat #000;
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       visibility: visible; -webkit-font-smoothing: antialiased;
