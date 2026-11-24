@@ -232,6 +232,7 @@
       <p class="fxl-sub fxl-sub-hero">Upload your assets, tune the look, and export polished visuals from focused browser-based simulators.</p>
       <div class="fxl-actions">
         <button class="fxl-btn fxl-btn-primary fxl-btn-hero" type="button" data-go="signup">Create account</button>
+        <button class="fxl-btn fxl-btn-ghost fxl-btn-hero" type="button" data-go="signin">Login</button>
       </div>
       <p class="fxl-legal">${LEGAL_LINKS.replace(' and ', ' &nbsp;·&nbsp; ')}</p>
     `
