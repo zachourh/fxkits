@@ -414,13 +414,12 @@ function drawCover(cx, image, x, y, w, h) {
   cx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh)
 }
 
+// A design with the sleeve's own 2:1 shape fills the whole sleeve. Any other shape is fitted
+// inside it at full size without cropping, the same rule the can editor uses.
 function drawSmartFit(cx, image, x, y, w, h) {
-  const maxW = w * 0.34
-  const maxH = h * 0.58
-  const ratio = Math.min(maxW / image.width, maxH / image.height)
-  const dw = image.width * ratio
-  const dh = image.height * ratio
-  cx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh)
+  const aspectDelta = Math.abs(image.width / image.height - w / h) / (w / h)
+  const draw = aspectDelta > 0.04 ? drawContain : drawCover
+  draw(cx, image, x, y, w, h)
 }
 
 function rebuildLabelTexture() {
@@ -488,7 +487,9 @@ function prepareSleeveGeometry(mesh) {
       const y = positions.getY(index)
       const z = positions.getZ(index)
       const angle = Math.atan2(z, x)
-      triU[j] = 1 - ((angle + Math.PI) / (Math.PI * 2))
+      // +0.25 turns the wrap so the middle of the design faces the camera's starting position,
+      // which puts the seam at the back of the cup.
+      triU[j] = (1.25 - ((angle + Math.PI) / (Math.PI * 2))) % 1
       triV[j] = (y - box.min.y) / height
     }
 
