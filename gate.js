@@ -1,10 +1,10 @@
 // FXKits sign-in gate.
 // A visitor who is not signed in sees a full-screen lander on the homepage and on every tool page.
-// They sign in with Google or with a link sent to their email (Firebase Authentication).
+// They sign in with Google, or with an email and password whose address they confirm by email (Firebase Authentication).
 // Once signed in, the whole site is open and their verified email is added to Kit.
 (function () {
   const USER_KEY = 'fxkits_user'
-  const PENDING_KEY = 'fxkits_pending_email'
+  const SESSION_ONLY_KEY = 'fxkits_session_only'
   const LEGACY_EMAIL_KEY = 'fxkits_email'
   const LOCK_CLASS = 'fx-locked'
   const SDK = 'https://www.gstatic.com/firebasejs/10.14.1'
@@ -24,6 +24,14 @@
   function write(key, value) {
     try { value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value) } catch (_) {}
   }
+  // "Keep me signed in" off means the sign-in lives in this tab only and ends when the browser closes.
+  function readSession(key) {
+    try { return sessionStorage.getItem(key) } catch (_) { return null }
+  }
+  function writeSession(key, value) {
+    try { value === null ? sessionStorage.removeItem(key) : sessionStorage.setItem(key, value) } catch (_) {}
+  }
+  function signedInEmail() { return read(USER_KEY) || readSession(USER_KEY) }
   function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
@@ -48,6 +56,8 @@
       link.addEventListener('click', async event => {
         event.preventDefault()
         write(USER_KEY, null)
+        writeSession(USER_KEY, null)
+        writeSession(SESSION_ONLY_KEY, null)
         try {
           const { fb, auth } = await loadSdk()
           await fb.signOut(auth)
@@ -57,7 +67,7 @@
     })
   }
 
-  if (read(USER_KEY)) {
+  if (signedInEmail()) {
     root.classList.remove(LOCK_CLASS)
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireSignOut)
     else wireSignOut()
@@ -136,6 +146,11 @@
     .fxl-input:focus { border-color: rgba(255,255,255,0.8); }
     .fxl-input::placeholder { color: rgba(255,255,255,0.5); }
     .fxl-error { min-height: 18px; font-size: 12px; line-height: 1.4; color: #ffd9d9; }
+    .fxl-error.fxl-note { color: #fff; }
+    .fxl-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: rgba(255,255,255,0.86); }
+    .fxl-check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+    .fxl-check input { width: 15px; height: 15px; margin: 0; accent-color: #fff; cursor: pointer; }
+    .fxl-small { font-size: 13px; }
     .fxl-switch { margin-top: 18px; font-size: 14px; color: rgba(255,255,255,0.8); }
     .fxl-link { background: none; border: 0; padding: 0; font: inherit; color: #fff; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
     .fxl-link:hover { opacity: 0.75; }
@@ -212,7 +227,6 @@
     return String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
   }
   function $(selector) { return inner.querySelector(selector) }
-  function setError(text) { const el = $('.fxl-error'); if (el) el.textContent = text || '' }
 
   function friendlyError(err) {
     const code = (err && err.code) || ''
@@ -220,13 +234,32 @@
     if (code === 'auth/popup-blocked') return 'Your browser blocked the Google window. Allow pop-ups for this site and try again.'
     if (code === 'auth/network-request-failed') return 'Network problem. Check your connection and try again.'
     if (code === 'auth/invalid-email') return 'Use a valid email address.'
+    if (code === 'auth/weak-password') return 'Use a password with at least 8 characters.'
+    if (code === 'auth/email-already-in-use') return 'An account with this email already exists. Sign in instead, or reset your password.'
+    if (['auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/wrong-password', 'auth/user-not-found'].includes(code)) {
+      return 'Wrong email or password. If you joined with Google, use the Google button. You can also reset your password.'
+    }
+    if (code === 'auth/user-disabled') return 'This account has been disabled.'
     if (code === 'auth/too-many-requests') return 'Too many attempts. Wait a few minutes and try again.'
-    if (code === 'auth/invalid-action-code' || code === 'auth/expired-action-code') return 'That sign-in link has expired or was already used. Request a new one.'
     if (code === 'auth/unauthorized-domain') return 'Sign-in is not enabled for this address yet.'
     return 'Something went wrong. Please try again.'
   }
 
+  function setError(text) {
+    const el = $('.fxl-error')
+    if (!el) return
+    el.classList.remove('fxl-note')
+    el.textContent = text || ''
+  }
+  function setNote(text) {
+    const el = $('.fxl-error')
+    if (!el) return
+    el.classList.add('fxl-note')
+    el.textContent = text || ''
+  }
+
   function viewWelcome() {
+    stopVerifyWatch()
     inner.classList.add('fxl-wide')
     inner.innerHTML = `
       <h1 class="fxl-title fxl-title-hero">AI-powered visual tools for creators</h1>
@@ -241,6 +274,7 @@
   }
 
   function viewAuth() {
+    stopVerifyWatch()
     inner.classList.remove('fxl-wide')
     const signup = mode === 'signup'
     inner.innerHTML = `
@@ -250,49 +284,89 @@
         <button class="fxl-btn fxl-btn-ghost" type="button" data-google>${GOOGLE_ICON}<span>Continue with Google</span></button>
         <div class="fxl-divider">or continue with email</div>
         <input class="fxl-input" type="email" name="email" autocomplete="email" placeholder="you@example.com" aria-label="Email" required>
-        <button class="fxl-btn fxl-btn-primary" type="submit">Email me a sign-in link</button>
+        <input class="fxl-input" type="password" name="password" autocomplete="${signup ? 'new-password' : 'current-password'}" placeholder="${signup ? 'Password, 8 characters or more' : 'Password'}" aria-label="Password" required>
+        <div class="fxl-row">
+          <label class="fxl-check"><input type="checkbox" name="remember" checked> Keep me signed in</label>
+          ${signup ? '' : '<button class="fxl-link fxl-small" type="button" data-forgot>Forgot password?</button>'}
+        </div>
+        <button class="fxl-btn fxl-btn-primary" type="submit">${signup ? 'Create account' : 'Sign in'}</button>
         <div class="fxl-error" aria-live="polite"></div>
       </form>
       <p class="fxl-switch">${signup ? 'Already have an account?' : 'New to FXKits?'} <button class="fxl-link" type="button" data-switch>${signup ? 'Sign in' : 'Create account'}</button></p>
       <p class="fxl-legal">${signup ? 'You will also get occasional emails about new tools and design work. Unsubscribe anytime. ' : ''}By continuing you agree to the ${LEGAL_LINKS}.</p>
     `
+    const form = $('form')
+    const field = name => form.elements[name]
     // People who gave an email through the old export popup get it prefilled.
     const known = read(LEGACY_EMAIL_KEY)
-    if (known && isValidEmail(known)) $('input').value = known
+    if (known && isValidEmail(known)) field('email').value = known
     $('[data-switch]').addEventListener('click', () => { mode = signup ? 'signin' : 'signup'; viewAuth() })
-    $('[data-google]').addEventListener('click', signInWithGoogle)
-    $('form').addEventListener('submit', event => { event.preventDefault(); sendLink($('input').value.trim()) })
+    $('[data-google]').addEventListener('click', () => signInWithGoogle(field('remember').checked))
+    const forgot = $('[data-forgot]')
+    if (forgot) forgot.addEventListener('click', () => resetPassword(field('email').value.trim()))
+    form.addEventListener('submit', event => {
+      event.preventDefault()
+      const email = field('email').value.trim(), password = field('password').value, remember = field('remember').checked
+      if (signup) createAccount(email, password, remember)
+      else signIn(email, password, remember)
+    })
   }
 
-  function viewSent(email) {
+  // Shown after sign-up, and whenever someone signs in before confirming their address.
+  // The link in the email can be opened in any browser or on any device. This tab checks every few
+  // seconds and opens the site as soon as the address is confirmed.
+  let verifyTimer = 0
+  let verifyFocus = null
+  function stopVerifyWatch() {
+    if (verifyTimer) { clearInterval(verifyTimer); verifyTimer = 0 }
+    if (verifyFocus) { window.removeEventListener('focus', verifyFocus); verifyFocus = null }
+  }
+  function viewVerify(user) {
+    stopVerifyWatch()
     inner.classList.remove('fxl-wide')
     inner.innerHTML = `
       ${LOGO}
-      <h1 class="fxl-title">Check your inbox</h1>
-      <p class="fxl-sub">We sent a sign-in link to <strong>${esc(email)}</strong>. Open it on this device to finish. It can take a minute to arrive, so check your spam folder too.</p>
-      <p class="fxl-switch"><button class="fxl-link" type="button" data-back>Use a different email</button></p>
+      <h1 class="fxl-title">Verify your email</h1>
+      <p class="fxl-sub">We sent a link to <strong>${esc(user.email)}</strong>. Open it in any browser or on any device. This page opens by itself once your email is verified. Check your spam folder if it has not arrived.</p>
+      <p class="fxl-switch"><button class="fxl-link" type="button" data-resend>Resend email</button> &nbsp;·&nbsp; <button class="fxl-link" type="button" data-other>Use a different email</button></p>
+      <div class="fxl-error" aria-live="polite"></div>
     `
-    $('[data-back]').addEventListener('click', viewAuth)
-  }
+    let checking = false
+    async function check() {
+      if (checking || finished) return
+      checking = true
+      try {
+        await user.reload()
+        if (user.emailVerified) {
+          stopVerifyWatch()
+          await user.getIdToken(true)   // a fresh token, so the server sees the confirmed address
+          await finish(user)
+        }
+      } catch (_) {}
+      checking = false
+    }
+    verifyTimer = setInterval(check, 3000)
+    verifyFocus = check
+    window.addEventListener('focus', verifyFocus)
 
-  function viewConfirm() {
-    inner.classList.remove('fxl-wide')
-    inner.innerHTML = `
-      ${LOGO}
-      <h1 class="fxl-title">Confirm your email</h1>
-      <p class="fxl-sub">Enter the email address this sign-in link was sent to.</p>
-      <form class="fxl-form" novalidate>
-        <input class="fxl-input" type="email" name="email" autocomplete="email" placeholder="you@example.com" aria-label="Email" required>
-        <button class="fxl-btn fxl-btn-primary" type="submit">Finish signing in</button>
-        <div class="fxl-error" aria-live="polite"></div>
-      </form>
-    `
-    $('form').addEventListener('submit', event => { event.preventDefault(); completeLink($('input').value.trim()) })
-  }
-
-  function viewWorking(text) {
-    inner.classList.remove('fxl-wide')
-    inner.innerHTML = `${LOGO}<h1 class="fxl-title">${esc(text)}</h1>`
+    $('[data-resend]').addEventListener('click', async () => {
+      try {
+        const { fb } = await loadSdk()
+        await sendVerification(fb, user)
+        setNote('Sent again. Give it a minute.')
+      } catch (err) {
+        setError(friendlyError(err))
+      }
+    })
+    $('[data-other]').addEventListener('click', async () => {
+      stopVerifyWatch()
+      try {
+        const { fb, auth } = await loadSdk()
+        await fb.signOut(auth)
+      } catch (_) {}
+      mode = 'signup'
+      viewAuth()
+    })
   }
 
   function setBusy(state) {
@@ -300,12 +374,23 @@
     inner.querySelectorAll('button, input').forEach(el => { el.disabled = state })
   }
 
-  async function signInWithGoogle() {
+  // Sets how long the sign-in lasts before it happens: across browser restarts, or this tab only.
+  async function applyRemember(fb, auth, remember) {
+    writeSession(SESSION_ONLY_KEY, remember ? null : '1')
+    await fb.setPersistence(auth, remember ? fb.browserLocalPersistence : fb.browserSessionPersistence)
+  }
+
+  function sendVerification(fb, user) {
+    return fb.sendEmailVerification(user, { url: window.location.origin + window.location.pathname + window.location.hash })
+  }
+
+  async function signInWithGoogle(remember) {
     if (busy) return
     setError('')
     setBusy(true)
     try {
       const { fb, auth } = await loadSdk()
+      await applyRemember(fb, auth, remember)
       const result = await fb.signInWithPopup(auth, new fb.GoogleAuthProvider())
       await finish(result.user)
     } catch (err) {
@@ -314,46 +399,57 @@
     }
   }
 
-  async function sendLink(email) {
+  async function createAccount(email, password, remember) {
     if (busy) return
     setError('')
     if (!isValidEmail(email)) { setError('Use a valid email address.'); return }
+    if (password.length < 8) { setError('Use a password with at least 8 characters.'); return }
     setBusy(true)
     try {
       const { fb, auth } = await loadSdk()
-      const url = window.location.origin + window.location.pathname + window.location.hash
-      await fb.sendSignInLinkToEmail(auth, email, { url, handleCodeInApp: true })
-      write(PENDING_KEY, email)
+      await applyRemember(fb, auth, remember)
+      const result = await fb.createUserWithEmailAndPassword(auth, email, password)
+      await sendVerification(fb, result.user).catch(() => {})
       busy = false
-      viewSent(email)
+      viewVerify(result.user)
     } catch (err) {
       setBusy(false)
       setError(friendlyError(err))
     }
   }
 
-  function cleanUrl() {
-    const url = new URL(window.location.href)
-    ;['apiKey', 'oobCode', 'mode', 'lang', 'continueUrl'].forEach(param => url.searchParams.delete(param))
-    window.history.replaceState(null, '', url.pathname + url.search + url.hash)
-  }
-
-  async function completeLink(email) {
+  async function signIn(email, password, remember) {
     if (busy) return
+    setError('')
     if (!isValidEmail(email)) { setError('Use a valid email address.'); return }
+    if (!password) { setError('Enter your password.'); return }
     setBusy(true)
     try {
       const { fb, auth } = await loadSdk()
-      const result = await fb.signInWithEmailLink(auth, email, window.location.href)
-      write(PENDING_KEY, null)
-      cleanUrl()
-      await finish(result.user)
-    } catch (err) {
+      await applyRemember(fb, auth, remember)
+      const result = await fb.signInWithEmailAndPassword(auth, email, password)
+      if (result.user.emailVerified) { await finish(result.user); return }
+      await sendVerification(fb, result.user).catch(() => {})
       busy = false
-      write(PENDING_KEY, null)
-      cleanUrl()
-      mode = 'signin'
-      viewAuth()
+      viewVerify(result.user)
+    } catch (err) {
+      setBusy(false)
+      setError(friendlyError(err))
+    }
+  }
+
+  async function resetPassword(email) {
+    if (busy) return
+    setError('')
+    if (!isValidEmail(email)) { setError('Type your email above first, then press Forgot password.'); return }
+    setBusy(true)
+    try {
+      const { fb, auth } = await loadSdk()
+      await fb.sendPasswordResetEmail(auth, email)
+      setBusy(false)
+      setNote('If that email has an account, a reset link is on its way.')
+    } catch (err) {
+      setBusy(false)
       setError(friendlyError(err))
     }
   }
@@ -380,7 +476,9 @@
   async function finish(user) {
     if (finished || !user || !user.email) return
     finished = true
-    write(USER_KEY, user.email)
+    stopVerifyWatch()
+    if (readSession(SESSION_ONLY_KEY)) writeSession(USER_KEY, user.email)
+    else write(USER_KEY, user.email)
     addToKit(user)
     lander.remove()
     style.remove()
@@ -740,11 +838,6 @@
     if (!still) requestAnimationFrame(tick)
   }
 
-  function looksLikeEmailLink() {
-    const params = new URLSearchParams(window.location.search)
-    return params.get('mode') === 'signIn' && params.has('oobCode')
-  }
-
   async function start() {
     document.body.appendChild(lander)
     root.classList.add(LOCK_CLASS)
@@ -757,18 +850,17 @@
       document.head.appendChild(link)
     })
 
-    if (looksLikeEmailLink()) {
-      const pending = read(PENDING_KEY)
-      if (pending) { viewWorking('Signing you in...'); completeLink(pending) }
-      else viewConfirm()
-    } else {
-      viewWelcome()
-    }
+    viewWelcome()
 
-    // A session from an earlier visit signs the person in without any click.
     try {
       const { fb, auth } = await loadSdk()
-      fb.onAuthStateChanged(auth, user => { if (user && !looksLikeEmailLink()) finish(user) })
+      // A session from an earlier visit signs the person in without any click. Someone who signed up
+      // but has not confirmed their address yet goes back to the waiting screen.
+      fb.onAuthStateChanged(auth, user => {
+        if (!user || finished || busy) return
+        if (user.emailVerified) finish(user)
+        else if (!verifyTimer) viewVerify(user)
+      })
       // On desktop, Firebase only loads its Google sign-in helper on the first click, and the popup waits for it.
       // Loading it now means the popup opens straight away. This uses an internal hook, so it is guarded.
       try {
