@@ -410,6 +410,7 @@
     panel.prepend(spill)
     const spillCtx = spill.getContext('2d')
 
+    const HOVER = false           // the cursor patch and the crumbling edge. Off for now; set to true to bring them back
     const GAP = 7                 // cell size
     const REACH = 4               // hover radius, in cells
     const FADE = 0.945            // how fast the hover trail dies, per 60th of a second
@@ -719,7 +720,7 @@
       requestAnimationFrame(tick)
     }
 
-    if (!still) {
+    if (!still && HOVER) {
       lander.addEventListener('pointermove', event => {
         if (event.pointerType && event.pointerType !== 'mouse') return
         const rect = panel.getBoundingClientRect()
