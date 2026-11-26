@@ -369,8 +369,10 @@ let wrapImage = null
 let useDefaultArtwork = true
 let labelCanvas = null
 let labelTexture = null
-const labelWidth = 1800
-const labelHeight = 900
+// The artwork canvas takes the sleeve's real proportions once the model has loaded (see prepareSleeveGeometry),
+// so a design is never stretched to fit. These are only the values used until then.
+let labelWidth = 1800
+let labelHeight = 900
 const MODEL_URL = 'assets/model/scene.gltf'
 
 function makeDefaultLabelCanvas() {
@@ -388,14 +390,15 @@ function makeDefaultLabelCanvas() {
   cx.fillStyle = 'rgba(255,255,255,0.88)'
   cx.fillRect(cv.width * 0.09, cv.height * 0.16, cv.width * 0.82, cv.height * 0.68)
   cx.fillStyle = '#1c1714'
-  cx.font = '800 132px system-ui, sans-serif'
+  const unit = cv.height / 900
+  cx.font = `800 ${Math.round(132 * unit)}px system-ui, sans-serif`
   cx.textAlign = 'center'
   cx.fillText('ROAST HOUSE', cv.width / 2, cv.height * 0.46)
-  cx.font = '500 42px system-ui, sans-serif'
+  cx.font = `500 ${Math.round(42 * unit)}px system-ui, sans-serif`
   cx.letterSpacing = '8px'
   cx.fillText('SPECIALTY COFFEE', cv.width / 2, cv.height * 0.59)
   cx.strokeStyle = 'rgba(28,23,20,0.22)'
-  cx.lineWidth = 6
+  cx.lineWidth = 6 * unit
   cx.strokeRect(cv.width * 0.12, cv.height * 0.2, cv.width * 0.76, cv.height * 0.6)
   return cv
 }
@@ -414,8 +417,8 @@ function drawCover(cx, image, x, y, w, h) {
   cx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh)
 }
 
-// A design with the sleeve's own 2:1 shape fills the whole sleeve. Any other shape is fitted
-// inside it at full size without cropping, the same rule the can editor uses.
+// A design with the sleeve's own shape fills the whole sleeve. Any other shape is fitted
+// inside it at full height without cropping or stretching, the same rule the can editor uses.
 function drawSmartFit(cx, image, x, y, w, h) {
   const aspectDelta = Math.abs(image.width / image.height - w / h) / (w / h)
   const draw = aspectDelta > 0.04 ? drawContain : drawCover
@@ -512,6 +515,31 @@ function prepareSleeveGeometry(mesh) {
   if (!source.attributes.normal) source.computeVertexNormals()
   mesh.geometry.dispose()
   mesh.geometry = source
+
+  // Measure the sleeve as it really is, unrolled flat: distance around it against its height.
+  // The model scales width and height differently, so the mesh's world scale is applied first.
+  mesh.updateWorldMatrix(true, false)
+  const scale = new THREE.Vector3().setFromMatrixScale(mesh.matrixWorld)
+  const band = height * 0.06
+  let topSum = 0, topCount = 0, bottomSum = 0, bottomCount = 0
+  for (let i = 0; i < positions.count; i++) {
+    const y = positions.getY(i)
+    const radius = Math.hypot(positions.getX(i) * scale.x, positions.getZ(i) * scale.z)
+    if (y > box.max.y - band) { topSum += radius; topCount++ }
+    else if (y < box.min.y + band) { bottomSum += radius; bottomCount++ }
+  }
+  if (topCount && bottomCount) {
+    const top = topSum / topCount, bottom = bottomSum / bottomCount
+    const slant = Math.hypot(height * scale.y, top - bottom)
+    const aspect = Math.PI * (top + bottom) / slant
+    if (aspect > 0.5 && aspect < 12) {
+      labelHeight = 1024
+      labelWidth = Math.round(labelHeight * aspect / 10) * 10
+      labelCanvas = null
+      if (labelTexture) { labelTexture.dispose(); labelTexture = null }
+      $('uploadSpec').textContent = `${labelWidth} x ${labelHeight} px`
+    }
+  }
 }
 
 function disposeSceneObject(object) {
